@@ -1,0 +1,112 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage[czech]{babel}
+%\usepackage[IL2]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{tocloft}
+\usepackage{multicol}
+\usepackage[hidelinks]{hyperref}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% Define code style for C
+\lstset{
+    language=C,
+    basicstyle=\ttfamily,
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    commentstyle=\color{green},
+    breaklines=true
+    frame=shadowbox,
+    numbers=left,
+    numberstyle=\small,
+    stepnumber=1,
+    numbersep=5pt,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+}
+
+
+\begin{document}
+
+%Uvodni strana
+\begin{titlepage}
+    \includegraphics[width=0.75\textwidth]{img/fav.png}
+    \begin{center}
+        
+        
+        \vspace{2cm}
+        
+        \Huge
+        Semestrální práce KIV/ZOS
+        
+        \vspace{1cm}
+        
+        \LARGE
+        Základy operačních systémů
+        
+        \vfill
+        
+        \vspace{0.5cm}
+        
+        \normalsize
+        \raggedright
+        Student:        Adam Míka \\
+        Osobní číslo:   A22B0319P \\
+        Email:          mikaa@students.zcu.cz \\
+        Datum:          20. září 2024
+        \vspace{0.2cm}
+        
+    \end{center}
+\end{titlepage}
+
+%tečky v obsahu
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftdotsep}}
+
+%obsah
+\setcounter{page}{2}
+\tableofcontents
+\listoffigures
+\lstlistoflistings
+\begin{thebibliography}{99}
+    \bibitem{image1ref} Zdroj Obrázku 1: \url{https://philipstel.wordpress.com/2010/08/04/dictionary-based-algorithm-lempel-ziv-welch/}
+  \end{thebibliography}
+\pagebreak
+
+
+\section{Zadání}
+\large
+\textbf{Hlavní cíle:}
+\normalsize
+Zbytek zadání zde: \href{https://portal.zcu.cz/CoursewarePortlets2/DownloadDokumentu?id=238432}{\textcolor[RGB]{20,20,200}{\underline{\textit{PDF}}}}
+
+
+\section{Analýza úlohy}
+
+
+\section{Ipmlementace}
+
+\begin{lstlisting}
+// hello.c
+#include <stdio.h>
+
+int main() {
+    printf("Hello, World!\n");
+    return 0;
+}
+\end{lstlisting}
+
+
+\section{Uživatelská příručka}
+
+
+\section{Závěr}
+
+\end{document}
