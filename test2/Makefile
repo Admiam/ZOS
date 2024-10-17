@@ -2,7 +2,7 @@
 CXX = clang++
 CXXFLAGS = -std=c++20 -stdlib=libc++
 TARGET = main
-SRCS = main.cpp PseudoFAT-test.cpp
+SRCS = main.cpp PseudoFAT-test2.cpp
 
 # Default target
 all: $(TARGET)

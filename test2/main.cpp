@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <sstream> // This header provides std::stringstream
-#include "PseudoFAT.h"
+#include "PseudoFAT-test2.h"
 
 int main(int argc, char *argv[])
 {
@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    PseudoFAT fs(argv[1]);
+    PseudoFAT2 fs(argv[1]);
     std::string command, arg;
 
     // Define currentDirectory

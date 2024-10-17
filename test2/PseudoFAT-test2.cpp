@@ -1,4 +1,4 @@
-#include "PseudoFAT.h"
+#include "PseudoFAT-test2.h"
 #include <sstream> // This header provides std::stringstream
 #include <algorithm> // For std::find_if
 
@@ -10,7 +10,7 @@ const int32_t FAT_BAD_CLUSTER = INT32_MAX - 3;
 const int32_t CLUSTER_SIZE = 4096;           // 4KB cluster size
 const int32_t DISK_SIZE = 600 * 1024 * 1024; // 600MB disk size
 
-PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory(nullptr), next_dir_id(0)
+PseudoFAT2::PseudoFAT2(const std::string &file) : filename(file), currentDirectory(nullptr), next_dir_id(0)
 {
     std::ifstream in(filename, std::ios::binary);
     if (!in)
@@ -26,7 +26,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
 }
 
     // Format the disk
-    void PseudoFAT::formatDisk()
+    void PseudoFAT2::formatDisk()
     {
         // Initialize description
         std::strcpy(desc.signature, "mikaa");
@@ -80,7 +80,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         saveToFile();
     }
 
-    void PseudoFAT::saveToFile()
+    void PseudoFAT2::saveToFile()
     {
         std::ofstream out(filename, std::ios::binary);
         if (!out)
@@ -130,7 +130,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         out.close();
     }
 
-    void PseudoFAT::loadFromFile() 
+    void PseudoFAT2::loadFromFile() 
     {
         std::ifstream in(filename, std::ios::binary);
         if (!in)
@@ -211,7 +211,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         in.close();
     }
 
-    bool PseudoFAT::createDirectory(const std::string &path)
+    bool PseudoFAT2::createDirectory(const std::string &path)
     {
 
         std::vector<std::string> pathParts = splitPath(path);
@@ -287,7 +287,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return true;
     }
 
-    void PseudoFAT::listDirectory(const directory_item *dir)
+    void PseudoFAT2::listDirectory(const directory_item *dir)
     {
 
         if (dir == nullptr || dir->children.empty())
@@ -305,7 +305,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         }
     }
 
-    std::string PseudoFAT::trimItemName(const char *itemName)
+    std::string PseudoFAT2::trimItemName(const char *itemName)
     {
         std::string name(itemName);
 
@@ -318,7 +318,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return name;
     }
 
-    directory_item *PseudoFAT::findDirectory(const std::vector<std::string> &pathParts)
+    directory_item *PseudoFAT2::findDirectory(const std::vector<std::string> &pathParts)
     {
         directory_item *current = currentDirectory; // Start from the current directory
 
@@ -351,7 +351,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return current;
     }
 
-    directory_item *PseudoFAT::findDirectoryFromRoot(const std::vector<std::string> &pathParts)
+    directory_item *PseudoFAT2::findDirectoryFromRoot(const std::vector<std::string> &pathParts)
     {
         directory_item *current = &rootDirectory[0]; // Start from the root directory
 
@@ -378,7 +378,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return current;
     }
 
-    std::vector<std::string> PseudoFAT::splitPath(const std::string &path) const
+    std::vector<std::string> PseudoFAT2::splitPath(const std::string &path) const
     {
         std::vector<std::string> result;
         std::istringstream stream(path);
@@ -401,12 +401,12 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return result;
     }
 
-    directory_item *PseudoFAT::getRootDirectory()
+    directory_item *PseudoFAT2::getRootDirectory()
     {
         return &rootDirectory[0]; // Assuming the root is stored in rootDirectory[0]
     }
 
-    void PseudoFAT::initializeFAT()
+    void PseudoFAT2::initializeFAT()
     {
         // Initialize FAT tables with the calculated number of clusters
         fat1.resize(desc.fat_count, FAT_UNUSED);
@@ -420,7 +420,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         }
     }
 
-    bool PseudoFAT::validateAndFormatName(const std::string &name, char *formattedName)
+    bool PseudoFAT2::validateAndFormatName(const std::string &name, char *formattedName)
     {
         if (name.empty() || name.length() > 11)
             return false;
@@ -444,7 +444,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return true;
     }
 
-    bool PseudoFAT::changeDirectory(const std::string &path)
+    bool PseudoFAT2::changeDirectory(const std::string &path)
     {
         // Case 1: Empty path means return to the root directory
         if (path.empty() || path == "/")
@@ -509,7 +509,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         }
     }
 
-    directory_item *PseudoFAT::findDirectoryById(int32_t id, directory_item *dir)
+    directory_item *PseudoFAT2::findDirectoryById(int32_t id, directory_item *dir)
     {
         if (dir->id == id)
         {
@@ -529,12 +529,12 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return nullptr; // Directory not found
     }
 
-    directory_item *PseudoFAT::getCurrentDirectory()
+    directory_item *PseudoFAT2::getCurrentDirectory()
     {
         return currentDirectory; // Return the current directory pointer
     }
 
-    std::string PseudoFAT::getFullPath(directory_item* dir)
+    std::string PseudoFAT2::getFullPath(directory_item* dir)
 {
     if (dir->parent_id == -1) {
         return ""; // Root directory
@@ -564,14 +564,14 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return removeSpaces(fullPath);
 }
 
-    std::string PseudoFAT::removeSpaces(const std::string &input)
+    std::string PseudoFAT2::removeSpaces(const std::string &input)
 {
     std::string result = input;
     result.erase(std::remove(result.begin(), result.end(), ' '), result.end());
     return result;
 }
 
-    void PseudoFAT::updateNextDirId()
+    void PseudoFAT2::updateNextDirId()
 {
     next_dir_id = 0; // Start at 0 (will be updated)
 
@@ -600,7 +600,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     next_dir_id++;
 }
 
-    bool PseudoFAT::rmdir(const std::string &path)
+    bool PseudoFAT2::rmdir(const std::string &path)
 {
     // Step 1: Find the target directory
     directory_item *targetDir = nullptr;
@@ -659,7 +659,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return true;
 }
 
-    std::string PseudoFAT::pwd()
+    std::string PseudoFAT2::pwd()
 {
     // Start from the current directory and trace back to the root
     directory_item *current = currentDirectory;
@@ -687,7 +687,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return fullPath;
 }
 
-    bool PseudoFAT::incp(const std::string &srcPath, const std::string &destPath)
+    bool PseudoFAT2::incp(const std::string &srcPath, const std::string &destPath)
 {
     // Step 1: Check if the source file exists on the PC
     std::ifstream srcFile(srcPath, std::ios::binary | std::ios::ate);
@@ -781,7 +781,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return true;
 }
 
-    int PseudoFAT::countFreeClusters()
+    int PseudoFAT2::countFreeClusters()
 {
     int freeCount = 0;
     for (const auto &entry : fat1)
@@ -794,7 +794,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return freeCount;
 }
 
-    int PseudoFAT::allocateCluster()
+    int PseudoFAT2::allocateCluster()
 {
     for (size_t i = 0; i < fat1.size(); ++i)
     {
@@ -807,7 +807,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return -1; // No free cluster found
 }
 
-    bool PseudoFAT::cat(const std::string &filePath)
+    bool PseudoFAT2::cat(const std::string &filePath)
 {
     // Step 1: Find the target file
     std::vector<std::string> pathParts = splitPath(filePath);

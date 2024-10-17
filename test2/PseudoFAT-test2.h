@@ -1,5 +1,5 @@
-#ifndef PseudoFAT_H
-#define PseudoFAT_H
+#ifndef PSEUDOFAT2_H
+#define PSEUDOFAT2_H
 
 #include <iostream>
 #include <vector>
@@ -58,10 +58,10 @@ struct directory_item
 };
 
 // PseudoFAT class
-class PseudoFAT
+class PseudoFAT2
 {
 public:
-    PseudoFAT(const std::string &filename);
+    PseudoFAT2(const std::string &filename);
 
     void formatDisk();
     bool createDirectory(const std::string &path);
