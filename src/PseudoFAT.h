@@ -28,6 +28,7 @@ struct description
     int32_t fat1_start_address;
     int32_t fat2_start_address;
     int32_t data_start_address;
+    int32_t directory_start_address; // New field for directory metadata start
 };
 
 // Directory item structure
@@ -79,6 +80,10 @@ public:
     std::string pwd();
     bool incp(const std::string &srcPath, const std::string &destPath);
     bool cat(const std::string &filePath);
+    void info(const std::string &path);
+    void outcp(const std::string &srcPath, const std::string &destPath);
+    void rm(const std::string &filePath);
+    void mv(const std::string &srcPath, const std::string &destPath);
 
 private : description desc;
     std::vector<int32_t> fat1;
@@ -98,6 +103,19 @@ private : description desc;
     int countFreeClusters();
     int allocateCluster();
     void loadDirectory(directory_item &dir, std::ifstream &in);
+    directory_item *findItem(const std::vector<std::string> &pathParts, bool fromRoot);
+    std::string generateUniqueFileName(directory_item *targetDir, const std::string &originalName);
+    void saveDirectory(std::ofstream &out, const directory_item &dir);
+    void loadDirectory(std::ifstream &in, directory_item &dir);
+    directory_item *findChildDirectory(directory_item *parent, const std::string &name);            // Helper function to find a child directory by name within a given directory
+    void writeFileData(std::ofstream &outFile, const directory_item &file);
+    bool validateDirectory(const directory_item &dir);
+    directory_item *locateDirectoryOrFile(const std::vector<std::string> &pathParts, directory_item *startDir);
+    directory_item *locateParentDirectory(const std::vector<std::string> &pathParts);
+    directory_item *locateDirectoryOrFileUsingParentIds(const std::vector<std::string> &pathParts, directory_item *startDir);
+    directory_item *resolvePath(const std::vector<std::string> &pathParts, directory_item *startDir);
+    directory_item *findParentRecursive(int32_t parentId, directory_item *currentDir);
+    directory_item *findParent(directory_item *child);
 };
 
 #endif // PSEUDOFAT_H

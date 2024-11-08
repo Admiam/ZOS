@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.7)  20 SEP 2024 19:43
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.7)  21 OCT 2024 09:41
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -390,7 +390,7 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 48
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 ))
 \c@lstlisting=\count304
-<img/fav.png, id=24, 597.432pt x 293.1753pt>
+<img/fav.png, id=32, 597.432pt x 293.1753pt>
 File: img/fav.png Graphic file (type png)
 <use img/fav.png>
 Package pdftex.def Info: img/fav.png  used on input line 39.
@@ -416,23 +416,49 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 \tf@lol=\write6
 \openout6 = `documentation.lol'.
 
- [2] [3] (./documentation.aux)
+ [2]
+Overfull \hbox (0.16122pt too wide) in paragraph at lines 102--103
+\OT1/cmr/m/n/12 v^^Sysledku dan^^Seho kola. Za-hr-nuje in-for-mace o tahu obou hr^^Sa^^Tc^^Wu a v^^Sysledku
+ []
+
+
+Overfull \hbox (18.29974pt too wide) in paragraph at lines 103--104
+[]\OT1/cmr/bx/n/12 RoundEndMessage\OT1/cmr/m/n/12 : Ser-ver touto zpr^^Savou ozna-muje ukon^^Tcen^^S^^P aktu^^Saln^^S^^Pho
+ []
+
+[3{/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]
+<img/protocol.png, id=70, 1564.84625pt x 1176.395pt>
+File: img/protocol.png Graphic file (type png)
+<use img/protocol.png>
+Package pdftex.def Info: img/protocol.png  used on input line 121.
+(pdftex.def)             Requested size: 272.99881pt x 205.226pt.
+
+Overfull \hbox (7.3115pt too wide) in paragraph at lines 126--127
+[]\OT1/cmr/m/n/12 Navr^^Tzen^^Sy pro-to-kol zaji^^Tst[]uje efek-tivn^^S^^P p^^Trenos in-for-mac^^S^^P a syn-chro-ni-zaci pr^^Wub^^Tehu
+ []
+
+[4
+pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) has been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.136     printf(
+                 "Hello, World!\n"); <./img/protocol.png>] [5] (./documentation.aux)
 Package rerunfilecheck Info: File `documentation.out' has not changed.
-(rerunfilecheck)             Checksum: 1B94EC3BAA801C89E7D11B81F7048FAC;534.
+(rerunfilecheck)             Checksum: F1F9A5799DD8BF20505B999C5B0A6B1B;814.
  ) 
 Here is how much of TeX's memory you used:
- 12646 strings out of 476025
- 197364 string characters out of 5790017
- 1871388 words of memory out of 5000000
- 32923 multiletter control sequences out of 15000+600000
- 517955 words of font info for 51 fonts, out of 8000000 for 9000
+ 12674 strings out of 476025
+ 197751 string characters out of 5790017
+ 1865388 words of memory out of 5000000
+ 32943 multiletter control sequences out of 15000+600000
+ 518292 words of font info for 52 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 63i,5n,67p,576b,1144s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb>
-Output written on documentation.pdf (3 pages, 117452 bytes).
+ 63i,6n,67p,708b,1974s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
+Output written on documentation.pdf (5 pages, 246409 bytes).
 PDF statistics:
- 98 PDF objects out of 1000 (max. 8388607)
- 78 compressed objects within 1 object stream
- 20 named destinations out of 1000 (max. 500000)
- 46 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 129 PDF objects out of 1000 (max. 8388607)
+ 102 compressed objects within 2 object streams
+ 25 named destinations out of 1000 (max. 500000)
+ 67 words of extra memory for PDF output out of 10000 (max. 10000000)
 

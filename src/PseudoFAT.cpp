@@ -41,6 +41,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         desc.fat1_start_address = sizeof(description);
         desc.fat2_start_address = desc.fat1_start_address + desc.fat_count * sizeof(int32_t);
         desc.data_start_address = desc.fat2_start_address + desc.fat_count * sizeof(int32_t);
+        desc.directory_start_address = desc.data_start_address; // Set directly after the FAT tables
 
         // Initialize FAT tables
         initializeFAT();
@@ -82,55 +83,56 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
 
     void PseudoFAT::saveToFile()
     {
-        std::ofstream out(filename, std::ios::binary);
-        if (!out)
+        std::ofstream outFile(filename, std::ios::binary | std::ios::in | std::ios::out);
+        if (!outFile)
         {
             std::cerr << "Error opening file for saving.\n";
             return;
         }
 
-        // Write the file system description (metadata)
-        out.write(reinterpret_cast<const char *>(&desc), sizeof(desc));
+        // 1. Write the file system description
+        outFile.seekp(0);
+        outFile.write(reinterpret_cast<const char *>(&desc), sizeof(desc));
 
-        // Write the FAT1 and FAT2 tables
-        out.write(reinterpret_cast<const char *>(fat1.data()), fat1.size() * sizeof(int32_t));
-        out.write(reinterpret_cast<const char *>(fat2.data()), fat2.size() * sizeof(int32_t));
+        // 2. Write the updated FAT tables
+        outFile.seekp(desc.fat1_start_address);
+        outFile.write(reinterpret_cast<const char *>(fat1.data()), fat1.size() * sizeof(int32_t));
+        outFile.seekp(desc.fat2_start_address);
+        outFile.write(reinterpret_cast<const char *>(fat2.data()), fat2.size() * sizeof(int32_t));
 
-        // Recursive function to save a directory and its children
-        std::function<void(const directory_item &)> saveDirectory = [&](const directory_item &dir)
-        {
-            // Save the directory itself
-            out.write(reinterpret_cast<const char *>(&dir.item_name), sizeof(dir.item_name));
-            out.write(reinterpret_cast<const char *>(&dir.isFile), sizeof(dir.isFile));
-            out.write(reinterpret_cast<const char *>(&dir.size), sizeof(dir.size));
-            out.write(reinterpret_cast<const char *>(&dir.start_cluster), sizeof(dir.start_cluster));
-            out.write(reinterpret_cast<const char *>(&dir.parent_id), sizeof(dir.parent_id));
-            out.write(reinterpret_cast<const char *>(&dir.id), sizeof(dir.id));
-
-            // Save the number of children
-            size_t childrenCount = dir.children.size();
-            out.write(reinterpret_cast<const char *>(&childrenCount), sizeof(size_t));
-
-            // Recursively save each child directory
-            for (const auto &child : dir.children)
-            {
-                saveDirectory(child);
-            }
-        };
-
-        // Save root directory and all its children recursively
-        size_t dirCount = rootDirectory.size();
-        out.write(reinterpret_cast<const char *>(&dirCount), sizeof(size_t));
-
+        // 3. Write the directory entries at the `directory_start_address`
+        outFile.seekp(desc.directory_start_address);
         for (const auto &dir : rootDirectory)
         {
-            saveDirectory(dir);
+            saveDirectory(outFile, dir);
         }
 
-        out.close();
+        outFile.close();
+        std::cout << "File system saved.\n";
     }
 
-    void PseudoFAT::loadFromFile() 
+    void PseudoFAT::saveDirectory(std::ofstream &outFile, const directory_item &dir)
+    {
+        // Write directory item fields
+        outFile.write(reinterpret_cast<const char *>(&dir.item_name), sizeof(dir.item_name));
+        outFile.write(reinterpret_cast<const char *>(&dir.isFile), sizeof(dir.isFile));
+        outFile.write(reinterpret_cast<const char *>(&dir.size), sizeof(dir.size));
+        outFile.write(reinterpret_cast<const char *>(&dir.start_cluster), sizeof(dir.start_cluster));
+        outFile.write(reinterpret_cast<const char *>(&dir.parent_id), sizeof(dir.parent_id));
+        outFile.write(reinterpret_cast<const char *>(&dir.id), sizeof(dir.id));
+
+        // Write the children count
+        size_t childrenCount = dir.children.size();
+        outFile.write(reinterpret_cast<const char *>(&childrenCount), sizeof(size_t));
+
+        // Recursively save each child directory
+        for (const auto &child : dir.children)
+        {
+            saveDirectory(outFile, child);
+        }
+    }
+
+    void PseudoFAT::loadFromFile()
     {
         std::ifstream in(filename, std::ios::binary);
         if (!in)
@@ -139,76 +141,101 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
             return;
         }
 
-        // Read the file system description
+        // Read the file system description (metadata)
         in.read(reinterpret_cast<char *>(&desc), sizeof(desc));
-        std::cout << "Disk size: " << desc.disk_size << ", FAT count: " << desc.fat_count << "\n";
 
-        // Read FAT1 and FAT2
+        // Read FAT tables
         fat1.resize(desc.fat_count);
+        in.seekg(desc.fat1_start_address);
         in.read(reinterpret_cast<char *>(fat1.data()), fat1.size() * sizeof(int32_t));
         fat2.resize(desc.fat_count);
+        in.seekg(desc.fat2_start_address);
         in.read(reinterpret_cast<char *>(fat2.data()), fat2.size() * sizeof(int32_t));
 
-        // Debugging FAT table entries
-        std::cout << "FAT1[0]: " << fat1[0] << "\n";
-        std::cout << "FAT1[1]: " << fat1[1] << "\n";
+        // Position the stream to the start of directory data
+        in.seekg(desc.directory_start_address);
 
-        // Recursive function to load a directory and its children
-        std::function<void(directory_item &)> loadDirectory = [&](directory_item &dir)
-        {
-            // Load the directory itself
-            in.read(reinterpret_cast<char *>(&dir.item_name), sizeof(dir.item_name));
-            in.read(reinterpret_cast<char *>(&dir.isFile), sizeof(dir.isFile));
-            in.read(reinterpret_cast<char *>(&dir.size), sizeof(dir.size));
-            in.read(reinterpret_cast<char *>(&dir.start_cluster), sizeof(dir.start_cluster));
-            in.read(reinterpret_cast<char *>(&dir.parent_id), sizeof(dir.parent_id));
-            in.read(reinterpret_cast<char *>(&dir.id), sizeof(dir.id));
+        // Clear current root directory
+        rootDirectory.clear();
 
-            // Debugging: Print directory info
-            std::cout << "Loaded directory: " << dir.item_name << ", ID: " << dir.id << ", Parent ID: " << dir.parent_id << "\n";
+        // Load directories only within the directory data region
+        size_t readCount = 0; // To prevent infinite loops
+        while (in && readCount < 1000)
+        { // Arbitrary max count to prevent overreading
+            directory_item dir;
+            loadDirectory(in, dir);
 
-            // Load the number of children
-            size_t childrenCount;
-            in.read(reinterpret_cast<char *>(&childrenCount), sizeof(size_t));
-
-            // Debugging: Check children count before resizing
-            if (childrenCount > 1000) // You can adjust this threshold based on expected maximum children
+            // Stop if we detect an invalid directory entry
+            if (!validateDirectory(dir))
             {
-                std::cerr << "Error: Invalid children count (" << childrenCount << ") for directory: " << dir.item_name << "\n";
-                return; // Avoid crashing by returning early if the count is clearly invalid
+                std::cerr << "Invalid directory entry detected, stopping load.\n";
+                break;
             }
 
-            dir.children.resize(childrenCount);
-
-            // Recursively load each child directory
-            for (auto &child : dir.children)
-            {
-                loadDirectory(child);
-            }
-        };
-
-        // Load root directory and all its children recursively
-        size_t dirCount;
-        in.read(reinterpret_cast<char *>(&dirCount), sizeof(size_t));
-        std::cout << "Root directory count: " << dirCount << "\n";
-
-        // Debugging: Check root directory count before resizing
-        if (dirCount > 1000) // Adjust this threshold as needed
-        {
-            std::cerr << "Error: Invalid root directory count (" << dirCount << ")\n";
-            return; // Avoid crashing by returning early if the count is clearly invalid
+            rootDirectory.push_back(dir);
+            readCount++;
         }
 
-        rootDirectory.resize(dirCount);
-
-        for (auto &dir : rootDirectory)
-        {
-            loadDirectory(dir);
-        }
-
-        currentDirectory = &rootDirectory[0]; // Set current directory to root
-
+        // Set root directory as current
+        currentDirectory = &rootDirectory[0];
         in.close();
+        std::cout << "Load complete\n";
+    }
+
+    void PseudoFAT::loadDirectory(std::ifstream &in, directory_item &dir)
+    {
+        in.read(reinterpret_cast<char *>(&dir.item_name), sizeof(dir.item_name));
+        in.read(reinterpret_cast<char *>(&dir.isFile), sizeof(dir.isFile));
+        in.read(reinterpret_cast<char *>(&dir.size), sizeof(dir.size));
+        in.read(reinterpret_cast<char *>(&dir.start_cluster), sizeof(dir.start_cluster));
+        in.read(reinterpret_cast<char *>(&dir.parent_id), sizeof(dir.parent_id));
+        in.read(reinterpret_cast<char *>(&dir.id), sizeof(dir.id));
+
+        // Check if this is a valid directory name; if not, stop loading
+        if (std::strlen(dir.item_name) == 0 || std::all_of(std::begin(dir.item_name), std::end(dir.item_name), [](char c)
+                                                           { return c == ' '; }))
+        {
+            std::cerr << "Invalid or empty directory name found.\n";
+            return;
+        }
+
+        // Load children count
+        size_t childrenCount;
+        in.read(reinterpret_cast<char *>(&childrenCount), sizeof(size_t));
+
+        // Validate children count
+        if (childrenCount > 100)
+        { // Arbitrary reasonable maximum
+            std::cerr << "Unreasonable children count (" << childrenCount << ") in directory: " << dir.item_name << "\n";
+            return;
+        }
+
+        dir.children.resize(childrenCount);
+
+        // Load each child directory recursively
+        for (auto &child : dir.children)
+        {
+            loadDirectory(in, child);
+        }
+
+        // Debug output
+        std::cout << "Loaded directory: " << dir.item_name
+                  << ", ID: " << dir.id << ", Parent ID: " << dir.parent_id
+                  << ", Children Count: " << childrenCount << std::endl;
+    }
+
+    bool PseudoFAT::validateDirectory(const directory_item &dir)
+    {
+        // Basic validation for directory entries to avoid loading unintended data
+        if (std::strlen(dir.item_name) == 0)
+        {
+            return false;
+        }
+        if (dir.id < 0 || dir.parent_id < -1)
+        {
+            return false;
+        }
+        return true;
     }
 
     bool PseudoFAT::createDirectory(const std::string &path)
@@ -386,16 +413,9 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     
         while (std::getline(stream, token, '/'))
         {
-            if (token == "..")
+            if (!token.empty() && token != ".")
             {
-                if (!result.empty())
-                {
-                    result.pop_back(); // Go up a directory
-                }
-            }
-            else if (!token.empty() && token != ".")
-            {
-                result.push_back(token); // Add non-empty, non-current directory tokens
+                result.push_back(token);
             }
         }
         return result;
@@ -687,7 +707,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return fullPath;
 }
 
-    bool PseudoFAT::incp(const std::string &srcPath, const std::string &destPath)
+bool PseudoFAT::incp(const std::string &srcPath, const std::string &destPath)
 {
     // Step 1: Check if the source file exists on the PC
     std::ifstream srcFile(srcPath, std::ios::binary | std::ios::ate);
@@ -701,40 +721,71 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     std::streamsize srcFileSize = srcFile.tellg();
     srcFile.seekg(0, std::ios::beg); // Reset the file pointer to the start
 
-    // Step 3: Check if the destination path exists in the file system
+    // Step 3: Split destination path and check if it ends with a slash
     std::vector<std::string> pathParts = splitPath(destPath);
     directory_item *targetDir = nullptr;
+    std::string newFileName;
 
-    if (destPath[0] == '/')
-    { // Absolute path
-        targetDir = findDirectoryFromRoot(pathParts);
+    bool isDirectoryPath = destPath.back() == '/';
+    if (isDirectoryPath)
+    {
+        // If the path ends with '/', treat the last component as a directory
+        targetDir = destPath[0] == '/' ? findDirectoryFromRoot(pathParts) : findDirectory(pathParts);
+        if (!targetDir || targetDir->isFile)
+        {
+            std::cerr << "PATH NOT FOUND\n";
+            return false;
+        }
+        // Use the original source file name in this case
+        newFileName = srcPath.substr(srcPath.find_last_of("/\\") + 1);
     }
     else
-    { // Relative path
-        targetDir = findDirectory(pathParts);
+    {
+        // If no trailing '/', check each part in the path except the last as a directory
+        targetDir = destPath[0] == '/' ? &rootDirectory[0] : currentDirectory;
+        for (size_t i = 0; i < pathParts.size() - 1; ++i)
+        {
+            targetDir = findChildDirectory(targetDir, pathParts[i]);
+            if (!targetDir)
+            {
+                std::cerr << "PATH NOT FOUND\n";
+                return false;
+            }
+        }
+        newFileName = pathParts.back(); // Last part is the filename
     }
 
-    if (!targetDir)
+    // Step 4: Check for duplicates and modify name if necessary
+    std::string originalName = newFileName;
+    while (std::any_of(targetDir->children.begin(), targetDir->children.end(),
+                       [&](const directory_item &child)
+                       {
+                           // Trim trailing spaces from child.item_name before comparison
+                           std::string trimmedChildName = trimItemName(child.item_name);
+                           return trimmedChildName == newFileName;
+                       }))
     {
-        std::cerr << "PATH NOT FOUND\n";
+        // Append a unique counter to the name if a duplicate is found
+        // newFileName = originalName + "(" + std::to_string(counter++) + ")";
+        std::cerr << "SAME NAME\n";
         return false;
     }
 
-    // Step 4: Ensure there is enough space in the file system to store the file
-    int requiredClusters = (srcFileSize + CLUSTER_SIZE - 1) / CLUSTER_SIZE; // Round up
-    int availableClusters = countFreeClusters();                            // Count how many free clusters are available
-
+    // Step 5: Ensure enough space in the file system and proceed with file saving as before
+    int requiredClusters = (srcFileSize + CLUSTER_SIZE - 1) / CLUSTER_SIZE;
+    int availableClusters = countFreeClusters();
     if (requiredClusters > availableClusters)
     {
         std::cerr << "NOT ENOUGH SPACE\n";
         return false;
     }
 
-    // Step 5: Allocate clusters for the file and update the FAT
+    // Step 6: Allocate clusters and write file data to allocated clusters
     std::vector<int> allocatedClusters;
     for (int i = 0; i < requiredClusters; ++i)
     {
         int freeCluster = allocateCluster();
+        std::cout << "Allocated cluster: " << freeCluster << '\n';
         if (freeCluster == -1)
         {
             std::cerr << "NOT ENOUGH SPACE\n";
@@ -743,9 +794,7 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         allocatedClusters.push_back(freeCluster);
     }
 
-    // Step 6: Write the file to the allocated clusters in the .dat file
     std::ofstream outFile(filename, std::ios::binary | std::ios::in | std::ios::out);
-
     for (int i = 0; i < requiredClusters; ++i)
     {
         char buffer[CLUSTER_SIZE] = {0};
@@ -753,35 +802,56 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         outFile.seekp(desc.data_start_address + allocatedClusters[i] * CLUSTER_SIZE);
         outFile.write(buffer, CLUSTER_SIZE);
 
-        // Update FAT to link clusters
+        std::cout << "Writing to cluster: " << allocatedClusters[i] << '\n';
+        
         if (i < requiredClusters - 1)
         {
-            fat1[allocatedClusters[i]] = allocatedClusters[i + 1]; // Link to next cluster
+            fat1[allocatedClusters[i]] = allocatedClusters[i + 1];
         }
         else
         {
-            fat1[allocatedClusters[i]] = FAT_FILE_END; // Mark the last cluster
+            fat1[allocatedClusters[i]] = FAT_FILE_END;
         }
     }
 
-    // Step 7: Update directory structure in the file system (add the new file to the target directory)
+    // Step 7: Add file to directory structure with the final unique name
     directory_item newFile;
-    std::strcpy(newFile.item_name, pathParts.back().c_str()); // Set the file name
+    std::strcpy(newFile.item_name, newFileName.c_str());
     newFile.isFile = true;
     newFile.size = srcFileSize;
     newFile.start_cluster = allocatedClusters[0];
-    newFile.id = next_dir_id++; // Assign unique ID
+    newFile.id = next_dir_id++;
 
     targetDir->children.push_back(newFile);
 
-    // Step 8: Save the updated file system back to the .dat file
+    // Step 8: Save updated file system back to the .dat file
     saveToFile();
 
     std::cout << "OK\n";
     return true;
 }
 
-    int PseudoFAT::countFreeClusters()
+directory_item *PseudoFAT::findChildDirectory(directory_item *parent, const std::string &name)
+{
+    // std::cout << "Searching for: " << name << " in directory: " << parent->item_name << '\n';
+    if (!parent)
+        return nullptr;
+
+    for (auto &child : parent->children)
+    {
+        std::string trimmedItemName = trimItemName(child.item_name); // Trim any extra spaces in item_name
+        // std::cout << "Comparing: '" << trimmedItemName << "' with '" << name << "'\n";
+
+        if (!child.isFile && trimmedItemName == name)
+        {
+            // std::cout << "Found: " << trimmedItemName << '\n';
+            return &child;
+        }
+    }
+    return nullptr;
+}
+
+int PseudoFAT::countFreeClusters()
 {
     int freeCount = 0;
     for (const auto &entry : fat1)
@@ -794,9 +864,9 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return freeCount;
 }
 
-    int PseudoFAT::allocateCluster()
+int PseudoFAT::allocateCluster()
 {
-    for (size_t i = 0; i < fat1.size(); ++i)
+    for (size_t i = 1; i < fat1.size(); ++i)
     {
         if (fat1[i] == FAT_UNUSED)
         {
@@ -807,22 +877,19 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     return -1; // No free cluster found
 }
 
-    bool PseudoFAT::cat(const std::string &filePath)
+bool PseudoFAT::cat(const std::string &filePath)
 {
-    // Step 1: Find the target file
     std::vector<std::string> pathParts = splitPath(filePath);
     directory_item *targetFile = nullptr;
 
     if (filePath[0] == '/')
     { // Absolute path
-        targetFile = findDirectoryFromRoot(pathParts);
+        targetFile = findItem(pathParts, true);
     }
     else
     { // Relative path
-        targetFile = findDirectory(pathParts);
+        targetFile = findItem(pathParts, false);
     }
-
-    std::cout << "targetFile: " << targetFile << '\n';
 
     if (!targetFile || !targetFile->isFile)
     {
@@ -830,7 +897,9 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return false;
     }
 
-    // Step 2: Read the file data from the clusters
+    std::cout << "Opening file '" << targetFile->item_name << "' for reading.\n";
+    std::cout << "File size: " << targetFile->size << ", Start cluster: " << targetFile->start_cluster << '\n';
+
     std::ifstream inFile(filename, std::ios::binary);
     if (!inFile)
     {
@@ -839,27 +908,502 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
     }
 
     int cluster = targetFile->start_cluster;
-    std::vector<char> fileData(targetFile->size); // Create buffer for file data
+    std::vector<char> fileData(targetFile->size);
     size_t bytesRead = 0;
 
     while (cluster != FAT_FILE_END && bytesRead < targetFile->size)
     {
+        // Calculate the position in the file for the current cluster
         inFile.seekg(desc.data_start_address + cluster * CLUSTER_SIZE);
 
-        // Read the data from the cluster
+        // Determine the number of bytes to read from this cluster
         size_t bytesToRead = std::min(static_cast<size_t>(CLUSTER_SIZE), targetFile->size - bytesRead);
+
+        // Read the data from the current cluster into the buffer
         inFile.read(fileData.data() + bytesRead, bytesToRead);
+
+        // Print the contents of this cluster
+        std::cout << "Contents of cluster " << cluster << ":\n";
+        std::cout.write(fileData.data() + bytesRead, bytesToRead);
+        std::cout << std::endl; // Newline after printing the cluster content
+
         bytesRead += bytesToRead;
 
-        // Move to the next cluster in the FAT
-        cluster = fat1[cluster];
+        // Debug output
+        // std::cout << "Reading cluster " << cluster << ", bytes read: " << bytesToRead
+        //           << ", Total bytes read: " << bytesRead << std::endl;
+
+        // Check the FAT to find the next cluster
+        int nextCluster = fat1[cluster];
+        if (nextCluster != FAT_FILE_END)
+        {
+            std::cout << "Next cluster: " << nextCluster << '\n';
+        }
+        cluster = nextCluster;
     }
 
+    // Close the file after reading all clusters
     inFile.close();
 
-    // Step 3: Print the file content
+    // Print the entire contents read from the file
+    std::cout << "\nFull file content:\n";
     std::cout.write(fileData.data(), targetFile->size);
     std::cout << std::endl;
 
+
     return true;
+}
+
+directory_item *PseudoFAT::findItem(const std::vector<std::string> &pathParts, bool fromRoot)
+{
+    // Determine the starting point: root directory or current directory
+    directory_item *current = fromRoot ? &rootDirectory[0] : currentDirectory;
+
+    for (const std::string &part : pathParts)
+    {
+        bool found = false;
+        std::cout << "Searching for: " << part << " in directory: " << current->item_name << '\n';
+
+        // Traverse the children to find the next item (file or directory) in the path
+        for (auto &child : current->children)
+        {
+            std::string trimmedItemName = trimItemName(child.item_name); // Trim any extra spaces in item_name
+            std::cout << "Comparing with: '" << trimmedItemName << "'\n";
+
+            if (std::strcmp(trimmedItemName.c_str(), part.c_str()) == 0)
+            {
+                current = &child;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            return nullptr; // Item not found
+        }
+    }
+
+    return current;
+}
+
+void PseudoFAT::info(const std::string &path)
+{
+    // Split the path and determine if it's absolute or relative
+    std::vector<std::string> pathParts = splitPath(path);
+    directory_item *target = nullptr;
+
+    if (path[0] == '/') // Absolute path
+    {
+        target = locateDirectoryOrFile(pathParts, &rootDirectory[0]);
+    }
+    else // Relative path
+    {
+        target = locateDirectoryOrFile(pathParts, currentDirectory);
+    }
+
+    if (!target)
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Retrieve the cluster chain if it's a valid file or directory
+    int cluster = target->start_cluster;
+    std::vector<int> clusters;
+
+    while (cluster != FAT_FILE_END && cluster >= 0 && cluster < fat1.size())
+    {
+        clusters.push_back(cluster);
+        cluster = fat1[cluster];
+    }
+
+    // Output the result
+    std::cout << target->item_name << " ";
+    for (size_t i = 0; i < clusters.size(); ++i)
+    {
+        std::cout << clusters[i];
+        if (i < clusters.size() - 1)
+            std::cout << ",";
+    }
+    std::cout << "\n";
+}
+
+// Enhanced helper function to locate file or directory, handling `..` and `.`
+directory_item *PseudoFAT::locateDirectoryOrFile(const std::vector<std::string> &pathParts, directory_item *startDir)
+{
+    directory_item *current = startDir;
+
+    for (const auto &part : pathParts)
+    {
+        if (part == "..") // Move up to parent directory if possible
+        {
+            if (current->parent_id != -1) // Ensure we're not already at root
+            {
+                current = findParent(current);
+            }
+        }
+        else if (part != ".") // Ignore current directory references (.)
+        {
+            bool found = false;
+            for (auto &child : current->children)
+            {
+                if (std::string(child.item_name).find(part) == 0) // Match directory name
+                {
+                    current = &child;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found)
+                return nullptr;
+        }
+    }
+    return current;
+}
+
+// Finds the parent directory of a given directory item by matching its `parent_id`
+directory_item *PseudoFAT::findParent(directory_item *child)
+{
+    return findParentRecursive(child->parent_id, &rootDirectory[0]);
+}
+
+// Helper recursive function to find the directory with a specific ID
+directory_item *PseudoFAT::findParentRecursive(int32_t parentId, directory_item *currentDir)
+{
+    // Check if the current directory's ID matches the specified parent ID
+    if (currentDir->id == parentId)
+    {
+        std::cout << "Found parent directory: " << trimItemName(currentDir->item_name)
+                  << " (ID: " << currentDir->id << ")\n";
+        return currentDir;
+    }
+
+    // Recursively search through each child directory of the current directory
+    for (auto &subdir : currentDir->children)
+    {
+        if (!subdir.isFile) // Only continue searching in directories
+        {
+            directory_item *parent = findParentRecursive(parentId, &subdir);
+            if (parent != nullptr) // Found the matching directory
+            {
+                return parent;
+            }
+        }
+    }
+
+    // If no match is found in this branch, return nullptr
+    return nullptr;
+}
+
+void PseudoFAT::outcp(const std::string &srcPath, const std::string &destPath)
+{
+    // Split the path and determine if it's absolute or relative
+    std::vector<std::string> srcPathParts = splitPath(srcPath);
+    directory_item *srcFile = nullptr;
+
+    if (srcPath[0] == '/') // Absolute path
+    {
+        srcFile = locateDirectoryOrFile(srcPathParts, &rootDirectory[0]);
+    }
+    else // Relative path
+    {
+        srcFile = locateDirectoryOrFile(srcPathParts, currentDirectory);
+    }
+
+    if (!srcFile || !srcFile->isFile) // Ensure it is a file, not a directory
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Open the destination file on the host file system
+    std::ofstream outFile(destPath, std::ios::binary);
+    if (!outFile)
+    {
+        std::cout << "PATH NOT FOUND\n";
+        return;
+    }
+
+    // Retrieve the cluster chain and write data to the output file, up to the file's actual size
+    int cluster = srcFile->start_cluster;
+    size_t bytesRemaining = srcFile->size; // Track how many bytes to write based on actual file size
+
+    while (cluster != FAT_FILE_END && bytesRemaining > 0)
+    {
+        // Determine the number of bytes to read for this cluster (either the whole cluster or remaining bytes)
+        size_t bytesToRead = std::min(static_cast<size_t>(CLUSTER_SIZE), bytesRemaining);
+
+        char buffer[CLUSTER_SIZE] = {0}; // Initialize buffer
+
+        // Open the .dat file and read the current cluster's data
+        std::ifstream in(filename, std::ios::binary);
+        in.seekg(desc.data_start_address + cluster * CLUSTER_SIZE);
+        in.read(buffer, bytesToRead);
+        in.close();
+
+        // Write only the necessary bytes to the destination file
+        outFile.write(buffer, bytesToRead);
+
+        // Update the bytes remaining and move to the next cluster
+        bytesRemaining -= bytesToRead;
+        cluster = fat1[cluster];
+    }
+
+    outFile.close();
+    std::cout << "OK\n";
+}
+
+void PseudoFAT::rm(const std::string &filePath)
+{
+    // Split the path and determine if it's absolute or relative
+    std::vector<std::string> pathParts = splitPath(filePath);
+    if (pathParts.empty())
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Determine the path to the parent directory
+    std::vector<std::string> parentPathParts(pathParts.begin(), pathParts.end() - 1);
+    directory_item *parentDir = nullptr;
+
+    if (filePath[0] == '/') // Absolute path
+    {
+        parentDir = locateDirectoryOrFile(parentPathParts, &rootDirectory[0]);
+    }
+    else // Relative path
+    {
+        parentDir = locateDirectoryOrFile(parentPathParts, currentDirectory);
+    }
+
+    if (!parentDir) // If parent directory not found
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Locate the file within the parent directory
+    directory_item *targetFile = nullptr;
+    std::string fileName = pathParts.back();
+
+    for (auto &child : parentDir->children)
+    {
+        if (std::string(child.item_name) == fileName && child.isFile) // Match file name and check it's a file
+        {
+            targetFile = &child;
+            break;
+        }
+    }
+
+    if (!targetFile) // If file not found in parent directory
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Release clusters used by the file in the FAT
+    int cluster = targetFile->start_cluster;
+    while (cluster != FAT_FILE_END && cluster >= 0 && cluster < fat1.size())
+    {
+        int nextCluster = fat1[cluster];
+        fat1[cluster] = FAT_UNUSED; // Mark the cluster as unused
+        cluster = nextCluster;
+    }
+
+    // Remove the file entry from the parent directory
+    auto it = std::remove_if(parentDir->children.begin(), parentDir->children.end(),
+                             [&](const directory_item &child)
+                             {
+                                 return &child == targetFile;
+                             });
+    parentDir->children.erase(it, parentDir->children.end());
+
+    // Save the updated file system to persist changes
+    saveToFile();
+    std::cout << "OK\n";
+}
+
+void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
+{
+    // Split the source path and locate the source item
+    std::vector<std::string> srcPathParts = splitPath(srcPath);
+    if (srcPathParts.empty())
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    directory_item *srcItem = (srcPath[0] == '/')
+                                  ? locateDirectoryOrFile(srcPathParts, &rootDirectory[0]) // Absolute path
+                                  : locateDirectoryOrFile(srcPathParts, currentDirectory); // Relative path
+
+    if (!srcItem || srcItem->isFile == false)
+    { // Ensure the source item exists and is a file
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Determine the destination directory and possible new name
+    std::vector<std::string> destPathParts = splitPath(destPath);
+    directory_item *destDir = (destPath[0] == '/')
+                                  ? resolvePath({destPathParts.begin(), destPathParts.end() - 1}, &rootDirectory[0]) // Absolute path
+                                  : resolvePath({destPathParts.begin(), destPathParts.end() - 1}, currentDirectory); // Relative path
+
+    if (!destDir || destDir->isFile)
+    {
+        std::cout << "PATH NOT FOUND\n";
+        return;
+    }
+
+    std::string newName = destPathParts.back();
+    bool nameConflict = false;
+
+    for (const auto &child : destDir->children)
+    {
+        if (trimItemName(child.item_name) == newName)
+        {
+            if (child.isFile)
+            {
+                std::cout << "SAME NAME\n";
+                return;
+            }
+            else
+            {
+                destDir = const_cast<directory_item *>(&child);
+                // Move to subdirectory if name matches a directory
+                newName = trimItemName(srcItem->item_name); // Keep original name in the subdirectory
+                nameConflict = true;
+                break;
+            }
+        }
+    }
+
+    directory_item *srcParent = (srcItem->parent_id == -1) ? &rootDirectory[0] : findParent(srcItem);
+
+    if (srcParent)
+    {
+        // std::cout << "Located parent directory: " << trimItemName(srcParent->item_name)
+        //           << " (ID: " << srcParent->id << ")\n";
+
+        // Check if the parent is the root directory
+        if (srcParent == &rootDirectory[0])
+        {
+            // Attempt to remove the item directly from rootDirectory by comparing IDs explicitly
+            srcParent->children.erase(
+                std::remove_if(srcParent->children.begin(), srcParent->children.end(),
+                               [&](const directory_item &item)
+                               {
+                                   // Compare both the ID and name to avoid accidental deletion of similarly named items
+                                   bool isMatch = (item.id == srcItem->id && trimItemName(item.item_name) == trimItemName(srcItem->item_name));
+
+                                   // Debug output to confirm when a match is found
+                                   if (isMatch)
+                                   {
+                                    //    std::cout << "Match found for removal: " << trimItemName(item.item_name)
+                                    //              << " (ID: " << item.id << ")\n";
+                                   }
+                                   return isMatch;
+                               }),
+                srcParent->children.end());
+
+            // Confirm rootDirectory contents after removal
+            for (const auto &item : rootDirectory)
+            {
+                // std::cout << "Remaining item - Name: " << trimItemName(item.item_name)
+                //           << ", ID: " << item.id << '\n';
+            }
+        }
+        else
+        {
+            // std::cout << "Parent is a subdirectory: " << trimItemName(srcParent->item_name) << "\n";
+
+            // Remove srcItem from its parent directory (subdirectory)
+            srcParent->children.erase(
+                std::remove_if(srcParent->children.begin(), srcParent->children.end(),
+                               [&](const directory_item &item)
+                               {
+                                //    std::cout << "Checking child item with name: " << trimItemName(item.item_name)
+                                //              << " and ID: " << item.id << '\n';
+                                   // Explicitly compare the ID instead of pointer address
+                                   bool isMatch = (item.id == srcItem->id && trimItemName(item.item_name) == trimItemName(srcItem->item_name));
+                                   if (isMatch)
+                                   {
+                                    //    std::cout << "Match found in subdirectory for removal: " << trimItemName(item.item_name)
+                                    //              << " (ID: " << item.id << ")\n";
+                                   }
+                                   return isMatch;
+                               }),
+                srcParent->children.end());
+
+            
+            // Confirmsubdirectory contents after removal
+            for (const auto &child : srcParent->children)
+            {
+                // std::cout << "Remaining child item - Name: " << trimItemName(child.item_name)
+                //           << ", ID: " << child.id << '\n';
+            }
+        }
+        // std::cout << "Removed item from parent directory: " << trimItemName(srcParent->item_name) << "\n";
+    }
+    else
+    {
+        std::cout << "Could not find the parent directory for item: " << trimItemName(srcItem->item_name)
+                  << " (ID: " << srcItem->id << ")\n";
+    }
+
+    // Create a copy of the item with updated attributes for the destination directory
+    directory_item movedItem = *srcItem;
+    movedItem.parent_id = destDir->id;
+    std::strcpy(movedItem.item_name, newName.c_str());
+
+    // Add the moved item to the destination directory
+    destDir->children.push_back(movedItem);
+
+    // std::cout << "Moved item successfully to destination directory with ID: " << destDir->id << "\n";
+
+    // Save changes to the .dat file to persist the move
+    saveToFile();
+
+    std::cout << "OK\n";
+}
+
+directory_item *PseudoFAT::resolvePath(const std::vector<std::string> &pathParts, directory_item *startDir)
+{
+    directory_item *current = startDir;
+
+    for (const auto &part : pathParts)
+    {
+        // std::cout << "Processing path part: " << part << "\n";
+
+        if (part == "..")
+        {
+            // Move up to the parent directory if not already at root
+            if (current->parent_id != -1)
+            {
+                current = findDirectoryById(current->parent_id, &rootDirectory[0]);
+                // std::cout << "Moved up to parent directory: " << (current ? trimItemName(current->item_name) : "nullptr") << "\n";
+            }
+        }
+        else if (part != ".")
+        {
+            bool found = false;
+            for (auto &child : current->children)
+            {
+                if (trimItemName(child.item_name) == part)
+                {
+                    current = &child;
+                    found = true;
+                    // std::cout << "Moved into directory: " << trimItemName(current->item_name) << "\n";
+                    break;
+                }
+            }
+            if (!found)
+            {
+                // std::cout << "Directory or file not found: " << part << "\n";
+                return nullptr;
+            }
+        }
+    }
+    return current;
 }

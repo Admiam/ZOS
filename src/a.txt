@@ -1,0 +1,151 @@
+void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
+{
+    std::cout << "Starting mv command with srcPath: " << srcPath << " and destPath: " << destPath << "\n";
+
+    // Split the source path and locate the source item
+    std::vector<std::string> srcPathParts = splitPath(srcPath);
+    if (srcPathParts.empty())
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Determine the path to the parent directory of the source item
+    std::vector<std::string> srcParentPathParts(srcPathParts.begin(), srcPathParts.end() - 1);
+    directory_item *srcParentDir = (srcPath[0] == '/')
+                                       ? locateDirectoryOrFile(srcParentPathParts, &rootDirectory[0]) // Absolute path
+                                       : locateDirectoryOrFile(srcParentPathParts, currentDirectory);  // Relative path
+
+    if (!srcParentDir)
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    std::cout << "Located source parent directory: " << trimItemName(srcParentDir->item_name)
+              << " (ID: " << srcParentDir->id << ")\n";
+
+    // Locate the source item within the source parent directory
+    directory_item *srcItem = nullptr;
+    std::string srcName = srcPathParts.back();
+    for (auto &child : srcParentDir->children)
+    {
+        if (trimItemName(child.item_name) == srcName)
+        {
+            srcItem = &child;
+            break;
+        }
+    }
+
+    if (!srcItem || !srcItem->isFile)
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    std::cout << "Located source item: " << trimItemName(srcItem->item_name) 
+              << " (ID: " << srcItem->id << ")\n";
+
+    // Split the destination path and locate the destination directory
+    std::vector<std::string> destPathParts = splitPath(destPath);
+    directory_item *destDir = nullptr;
+    std::string newName = srcName;
+
+    if (destPathParts.empty())
+    {
+        std::cout << "PATH NOT FOUND\n";
+        return;
+    }
+
+    if (destPath == "/")
+    {
+        destDir = &rootDirectory[0]; // If root path, directly assign root directory
+    }
+    else
+    {
+        // Handle `..` in the destination path
+        std::vector<std::string> resolvedDestPathParts;
+        if (destPath[0] == '/')
+        {
+            resolvedDestPathParts.push_back(""); // Starting from root
+        }
+
+        for (const auto &part : destPathParts)
+        {
+            if (part == "..")
+            {
+                if (!resolvedDestPathParts.empty() && resolvedDestPathParts.back() != "")
+                {
+                    resolvedDestPathParts.pop_back(); // Move up a directory level
+                }
+            }
+            else if (part != ".")
+            {
+                resolvedDestPathParts.push_back(part); // Regular directory or file name
+            }
+        }
+
+        // Resolve destination directory path
+        destDir = (destPath[0] == '/')
+                      ? locateDirectoryOrFile({resolvedDestPathParts.begin(), resolvedDestPathParts.end() - 1}, &rootDirectory[0]) // Absolute path
+                      : locateDirectoryOrFile({resolvedDestPathParts.begin(), resolvedDestPathParts.end() - 1}, currentDirectory);  // Relative path
+    }
+
+    if (!destDir || destDir->isFile)
+    {
+        std::cout << "PATH NOT FOUND\n";
+        return;
+    }
+
+    std::cout << "Located destination directory: " << trimItemName(destDir->item_name) 
+              << " (ID: " << destDir->id << ")\n";
+
+    // Handle potential name conflicts in the destination directory
+    bool nameConflict = false;
+    newName = destPathParts.back(); // Use the last part of the destination path as the new name
+    for (const auto &child : destDir->children)
+    {
+        if (trimItemName(child.item_name) == newName)
+        {
+            if (child.isFile)
+            {
+                std::cout << "SAME NAME\n";
+                return;
+            }
+            else
+            {
+                destDir = const_cast<directory_item *>(&child); // Move to subdirectory if name matches a directory
+                newName = trimItemName(srcItem->item_name);     // Keep the original name in the subdirectory
+                nameConflict = true;
+                break;
+            }
+        }
+    }
+
+    // Debug output for final name decision
+    std::cout << "Moving item with name: " << trimItemName(srcItem->item_name)
+              << " to destination directory: " << trimItemName(destDir->item_name) 
+              << " with new name: " << newName << "\n";
+
+    // Remove the item from its original directory
+    srcParentDir->children.erase(
+        std::remove_if(srcParentDir->children.begin(), srcParentDir->children.end(),
+                       [&](const directory_item &item)
+                       { return &item == srcItem; }),
+        srcParentDir->children.end());
+
+    // Create a copy of the item with updated attributes for the destination directory
+    directory_item movedItem = *srcItem;
+    movedItem.parent_id = destDir->id;
+    std::strcpy(movedItem.item_name, newName.c_str());
+
+    // Add the moved item to the destination directory
+    destDir->children.push_back(movedItem);
+
+    std::cout << "Moved item successfully to destination directory with ID: " << destDir->id << "\n";
+
+    // Save changes to the .dat file to persist the move
+    saveToFile();
+
+    std::cout << "OK\n";
+}
