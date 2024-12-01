@@ -279,17 +279,25 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
 
     bool PseudoFAT::createDirectory(const std::string &path)
     {
-        std::vector<std::string> pathParts = splitPath(path);
-        if (pathParts.empty())
+        std::istringstream stream(path);
+        std::vector<std::string> parts;
+        std::string part;
+
+        while (stream >> part) // Split path by whitespace
+        {
+            parts.push_back(part);
+        }
+
+        if (parts.size() != 1 || parts.empty()) // Check for exactly one part
         {
             std::cerr << "INVALID PATH\n";
             return false;
         }
 
+        std::string validPath = parts[0];
+        std::vector<std::string> pathParts = splitPath(validPath);
         std::string newDirName = pathParts.back();
         pathParts.pop_back(); // Remove the new directory name from the path
-
-
         directory_item *parentDir = nullptr;
 
         parentDir = (path[0] == '/')
@@ -649,25 +657,35 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
     next_dir_id++;
 }
 
-    bool PseudoFAT::rmdir(const std::string &path)
+bool PseudoFAT::rmdir(const std::string &path)
 {
-    // Step 1: Find the target directory
-    directory_item *targetDir = nullptr;
-    std::vector<std::string> pathParts = splitPath(path);
 
-    // Handle absolute or relative paths
-    if (path[0] == '/')
-    { // Absolute path
-        targetDir = findDirectoryFromRoot(pathParts);
+    std::istringstream stream(path);
+    std::vector<std::string> parts;
+    std::string part;
+
+    while (stream >> part) // Split path by whitespace
+    {
+        parts.push_back(part);
     }
-    else
-    { // Relative path
-        targetDir = findDirectory(pathParts);
+
+    if (parts.size() != 1) // Check for exactly one part
+    {
+        std::cerr << "INVALID PATH: Please provide only one argument.\n";
+        return false;
     }
+
+    std::string validPath = parts[0];
+    std::vector<std::string> pathParts = splitPath(validPath);
+    directory_item *targetDir = nullptr;
+
+    targetDir = (path[0] == '/')
+                    ? locateDirectoryOrFile(pathParts, &rootDirectory[0]) // Absolute path
+                    : locateDirectoryOrFile(pathParts, currentDirectory); // Relative path
 
     if (!targetDir)
     {
-        std::cerr << "FILE NOT FOUND\n";
+        std::cerr << "PATH NOT FOUND\n";
         return false;
     }
 
@@ -684,6 +702,12 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
     if (!parentDir)
     {
         std::cerr << "Parent directory not found.\n";
+        return false;
+    }
+
+    if (targetDir->isFile)
+    {
+        std::cerr << "Cannot remove: " << targetDir->item_name << " is not a directory.\n";
         return false;
     }
 
