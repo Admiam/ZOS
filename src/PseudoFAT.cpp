@@ -279,7 +279,6 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
 
     bool PseudoFAT::createDirectory(const std::string &path)
     {
-
         std::vector<std::string> pathParts = splitPath(path);
         if (pathParts.empty())
         {
@@ -287,30 +286,21 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
             return false;
         }
 
-
         std::string newDirName = pathParts.back();
         pathParts.pop_back(); // Remove the new directory name from the path
 
 
         directory_item *parentDir = nullptr;
 
-        if (path[0] == '/') // Absolute path
-        {
-
-            parentDir = findDirectoryFromRoot(pathParts);
-        }
-        else // Relative path
-        {
-
-            parentDir = findDirectory(pathParts);
-        }
+        parentDir = (path[0] == '/')
+                          ? locateDirectoryOrFile(pathParts, &rootDirectory[0]) // Absolute path
+                          : locateDirectoryOrFile(pathParts, currentDirectory); // Relative path
 
         if (!parentDir)
         {
             std::cerr << "PATH NOT FOUND\n";
             return false;
         }
-
 
         char formattedName[12];
         if (!validateAndFormatName(newDirName, formattedName))
@@ -319,11 +309,9 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
             return false;
         }
 
-
         for (const auto &dir : parentDir->children)
         {
-
-            if (std::strcmp(dir.item_name, formattedName) == 0)
+            if (trimWhitespace(dir.item_name) == trimWhitespace(formattedName))
             {
                 std::cerr << "EXIST\n";
                 return false;
@@ -336,19 +324,8 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
         newDir.size = 0;
         newDir.start_cluster = -1;
         newDir.parent_id = parentDir->id;
-
-        std::cout << "next_dir_id: " << next_dir_id << "\n";
-
         newDir.id = next_dir_id++;
-
-
         parentDir->children.push_back(newDir);
-
-        std::cout << "Creating directory: " << newDir.item_name << "\n";
-        std::cout << "parentDir->id: " << newDir.parent_id << "\n";
-        std::cout << "newDir->id: " << newDir.id << "\n";
-        std::cout << "OK\n";
-
         saveToFile();
         return true;
     }
