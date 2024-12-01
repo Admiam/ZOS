@@ -1,24 +1,43 @@
 #include "PseudoFAT.h"
-#include <sstream> // This header provides std::stringstream
-#include <algorithm> // For std::find_if
+#include <sstream> 
+#include <algorithm>  
 
 // FAT markers definitions
 const int32_t FAT_UNUSED = INT32_MAX - 1;
 const int32_t FAT_FILE_END = INT32_MAX - 2;
 const int32_t FAT_BAD_CLUSTER = INT32_MAX - 3;
 
-const int32_t CLUSTER_SIZE = 4096;           // 4KB cluster size
-const int32_t DISK_SIZE = 600 * 1024 * 1024; // 600MB disk size
-
+const int32_t CLUSTER_SIZE = 1024;   
+ 
 PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory(nullptr), next_dir_id(0)
 {
     std::ifstream in(filename, std::ios::binary);
     if (!in)
     {
+        std::string command, arg;
         std::cout << "File not found, formatting disk...\n";
-        formatDisk();
-    }
-    else
+        bool notFormated = true;
+        while (notFormated)
+        {
+            std::string prompt = " > ";
+            std::cout << prompt;
+
+            std::cin >> command;
+            std::string arg; // Reset argument for each command
+
+            if (command == "exit")
+            {
+                break;
+            }else if (command == "format")
+            {
+                std::cin >> arg;
+                formatDisk(arg);
+                notFormated = false;
+            }else{
+                std::cout << "Please format the disk first\n";
+            }
+        }
+    } else
     {
         loadFromFile();
         updateNextDirId(); // Ensure next_dir_id is set correctly after loading
@@ -26,60 +45,80 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
 }
 
     // Format the disk
-    void PseudoFAT::formatDisk()
+bool PseudoFAT::formatDisk(const std::string &sizeStr)
+{
+    // Parse size in MB from the format command (e.g., "600MB")
+    int sizeMB = 0;
+    try
     {
-        // Initialize description
-        std::strcpy(desc.signature, "mikaa");
-        desc.disk_size = DISK_SIZE;
-        desc.cluster_size = CLUSTER_SIZE;
-
-        // Calculate the number of clusters and FAT entries
-        desc.cluster_count = desc.disk_size / desc.cluster_size;
-        desc.fat_count = desc.cluster_count;
-
-        // Set starting addresses for FAT1, FAT2, and data block
-        desc.fat1_start_address = sizeof(description);
-        desc.fat2_start_address = desc.fat1_start_address + desc.fat_count * sizeof(int32_t);
-        desc.data_start_address = desc.fat2_start_address + desc.fat_count * sizeof(int32_t);
-        desc.directory_start_address = desc.data_start_address; // Set directly after the FAT tables
-
-        // Initialize FAT tables
-        initializeFAT();
-
-        // Create the blank .dat file and set its size to 600MB by writing zeros in chunks
-        std::ofstream out(filename, std::ios::binary);
-
-        if (!out.is_open())
-        {
-            std::cerr << "Error creating the file.\n";
-            return;
-        }
-
-        // Set file to 600MB by writing empty clusters (zeros)
-        const size_t chunk_size = 4096;          // Write in 4KB chunks
-        std::vector<char> buffer(chunk_size, 0); // Buffer of zeros
-
-        size_t total_written = 0;
-        while (total_written < DISK_SIZE)
-        {
-            out.write(buffer.data(), chunk_size);
-            total_written += chunk_size;
-        }
-
-        rootDirectory.clear();
-        directory_item root;
-        strcpy(root.item_name, "/");
-        root.isFile = false;
-        root.size = 0;
-        root.start_cluster = -1;
-        root.parent_id = -1;
-        root.id = next_dir_id++;
-        rootDirectory.push_back(root);
-
-        currentDirectory = &rootDirectory[0];
-
-        saveToFile();
+        sizeMB = std::stoi(sizeStr);
     }
+    catch (...)
+    {
+        std::cerr << "Invalid size format. Please specify as 'format <size>MB'.\n";
+        return false;
+    }
+
+    // Set DISK_SIZE based on the parsed MB size
+    const int32_t DISK_SIZE = sizeMB * 1024 * 1024;
+
+    // Initialize the description structure with formatted settings
+    std::strcpy(desc.signature, "mikaa");
+    desc.disk_size = DISK_SIZE;
+    desc.cluster_size = CLUSTER_SIZE;
+
+    // Calculate cluster count and FAT entries based on disk size and cluster size
+    desc.cluster_count = desc.disk_size / desc.cluster_size;
+    desc.fat_count = desc.cluster_count;
+
+    // Set starting addresses for FAT1, FAT2, and data
+    desc.fat1_start_address = sizeof(description);
+    desc.fat2_start_address = desc.fat1_start_address + desc.fat_count * sizeof(int32_t);
+    desc.data_start_address = desc.fat2_start_address + desc.fat_count * sizeof(int32_t);
+    desc.directory_start_address = desc.data_start_address;
+
+    // Initialize the FAT tables
+    initializeFAT();
+
+    // Create or overwrite the .dat file with the specified disk size
+    std::ofstream out(filename, std::ios::binary | std::ios::trunc);
+
+    if (!out.is_open())
+    {
+        std::cerr << "CANNOT CREATE FILE\n";
+        return false;
+    }
+
+    // Set the file to the specified size by writing empty clusters
+    const size_t chunk_size = 4096;          // Write in 4KB chunks
+    std::vector<char> buffer(chunk_size, 0); // Buffer of zeros
+    size_t total_written = 0;
+
+    while (total_written < DISK_SIZE)
+    {
+        out.write(buffer.data(), std::min(chunk_size, DISK_SIZE - total_written));
+        total_written += chunk_size;
+    }
+    out.close();
+
+    // Clear and set up the root directory
+    rootDirectory.clear();
+    directory_item root;
+    std::strcpy(root.item_name, "/");
+    root.isFile = false;
+    root.size = 0;
+    root.start_cluster = -1;
+    root.parent_id = -1;
+    root.id = next_dir_id++;
+    rootDirectory.push_back(root);
+    currentDirectory = &rootDirectory[0];
+
+    // Save formatted file system to .dat file
+    saveToFile();
+
+    std::cout << "OK\n";
+    return true;
+}
 
     void PseudoFAT::saveToFile()
     {
@@ -314,8 +353,28 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         return true;
     }
 
-    void PseudoFAT::listDirectory(const directory_item *dir)
+    void PseudoFAT::listDirectory(const std::string &filePath)
     {
+        directory_item *dir = currentDirectory; // Start from the current directory
+
+        if(!filePath.empty())
+        {
+            std::vector<std::string> pathParts = splitPath(filePath);
+            dir = (filePath[0] == '/')
+                                      ? locateDirectoryOrFile(pathParts, &rootDirectory[0]) // Absolute path
+                                      : locateDirectoryOrFile(pathParts, currentDirectory); // Relative path
+            if (dir == nullptr)
+            {
+                std::cerr << "Directory not found.\n";
+                return;
+            }
+            // If the target is a file, print error and exit
+            if (dir->isFile)
+            {
+                std::cerr << "Error: " << trimItemName(dir->item_name) << " is a file, not a directory.\n";
+                return;
+            }
+        }
 
         if (dir == nullptr || dir->children.empty())
         {
@@ -431,13 +490,6 @@ PseudoFAT::PseudoFAT(const std::string &file) : filename(file), currentDirectory
         // Initialize FAT tables with the calculated number of clusters
         fat1.resize(desc.fat_count, FAT_UNUSED);
         fat2.resize(desc.fat_count, FAT_UNUSED); // Redundant FAT2
-    
-        // Example of marking some clusters as bad (optional)
-        if (desc.fat_count > 5)
-        {
-            fat1[5] = FAT_BAD_CLUSTER;
-            fat2[5] = FAT_BAD_CLUSTER;
-        }
     }
 
     bool PseudoFAT::validateAndFormatName(const std::string &name, char *formattedName)
@@ -880,16 +932,10 @@ int PseudoFAT::allocateCluster()
 bool PseudoFAT::cat(const std::string &filePath)
 {
     std::vector<std::string> pathParts = splitPath(filePath);
-    directory_item *targetFile = nullptr;
 
-    if (filePath[0] == '/')
-    { // Absolute path
-        targetFile = findItem(pathParts, true);
-    }
-    else
-    { // Relative path
-        targetFile = findItem(pathParts, false);
-    }
+    directory_item *targetFile = (filePath[0] == '/')
+                                     ? locateDirectoryOrFile(pathParts, &rootDirectory[0]) // Absolute path
+                                     : locateDirectoryOrFile(pathParts, currentDirectory); // Relative path
 
     if (!targetFile || !targetFile->isFile)
     {
@@ -897,8 +943,8 @@ bool PseudoFAT::cat(const std::string &filePath)
         return false;
     }
 
-    std::cout << "Opening file '" << targetFile->item_name << "' for reading.\n";
-    std::cout << "File size: " << targetFile->size << ", Start cluster: " << targetFile->start_cluster << '\n';
+    // std::cout << "Opening file '" << targetFile->item_name << "' for reading.\n";
+    // std::cout << "File size: " << targetFile->size << ", Start cluster: " << targetFile->start_cluster << '\n';
 
     std::ifstream inFile(filename, std::ios::binary);
     if (!inFile)
@@ -922,23 +968,10 @@ bool PseudoFAT::cat(const std::string &filePath)
         // Read the data from the current cluster into the buffer
         inFile.read(fileData.data() + bytesRead, bytesToRead);
 
-        // Print the contents of this cluster
-        std::cout << "Contents of cluster " << cluster << ":\n";
-        std::cout.write(fileData.data() + bytesRead, bytesToRead);
-        std::cout << std::endl; // Newline after printing the cluster content
-
         bytesRead += bytesToRead;
-
-        // Debug output
-        // std::cout << "Reading cluster " << cluster << ", bytes read: " << bytesToRead
-        //           << ", Total bytes read: " << bytesRead << std::endl;
 
         // Check the FAT to find the next cluster
         int nextCluster = fat1[cluster];
-        if (nextCluster != FAT_FILE_END)
-        {
-            std::cout << "Next cluster: " << nextCluster << '\n';
-        }
         cluster = nextCluster;
     }
 
@@ -946,7 +979,6 @@ bool PseudoFAT::cat(const std::string &filePath)
     inFile.close();
 
     // Print the entire contents read from the file
-    std::cout << "\nFull file content:\n";
     std::cout.write(fileData.data(), targetFile->size);
     std::cout << std::endl;
 
@@ -1360,7 +1392,7 @@ void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
     // Add the moved item to the destination directory
     destDir->children.push_back(movedItem);
 
-    // std::cout << "Moved item successfully to destination directory with ID: " << destDir->id << "\n";
+    std::cout << "Moved item successfully to destination directory with ID: " << destDir->id << "\n";
 
     // Save changes to the .dat file to persist the move
     saveToFile();
@@ -1406,4 +1438,339 @@ directory_item *PseudoFAT::resolvePath(const std::vector<std::string> &pathParts
         }
     }
     return current;
+}
+
+void PseudoFAT::cp(const std::string &srcPath, const std::string &destPath)
+{
+    // Step 1: Locate the source file
+    std::vector<std::string> srcPathParts = splitPath(srcPath);
+    directory_item *srcFile = (srcPath[0] == '/')
+                                  ? locateDirectoryOrFile(srcPathParts, &rootDirectory[0]) // Absolute path
+                                  : locateDirectoryOrFile(srcPathParts, currentDirectory); // Relative path
+
+    if (!srcFile || !srcFile->isFile)
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Step 2: Locate the destination directory
+    std::vector<std::string> destPathParts = splitPath(destPath);
+    directory_item *destDir = (destPath[0] == '/')
+                                  ? locateDirectoryOrFile({destPathParts.begin(), destPathParts.end() - 1}, &rootDirectory[0]) // Absolute path
+                                  : locateDirectoryOrFile({destPathParts.begin(), destPathParts.end() - 1}, currentDirectory); // Relative path
+
+    if (!destDir || destDir->isFile)
+    {
+        std::cout << "PATH NOT FOUND\n";
+        return;
+    }
+
+    // Step 3: Check for duplicate file name in the destination
+    std::string newName = destPathParts.back();
+    for (const auto &child : destDir->children)
+    {
+        if (trimItemName(child.item_name) == newName)
+        {
+            std::cout << "SAME NAME\n";
+            return;
+        }
+    }
+
+    // Step 4: Allocate clusters for the copy
+    int cluster = srcFile->start_cluster;
+    std::vector<int> newClusters;
+    int remainingSize = srcFile->size;
+
+    while (cluster != FAT_FILE_END && cluster >= 0 && cluster < fat1.size())
+    {
+        int newCluster = allocateCluster();
+        if (newCluster == -1)
+        {
+            std::cerr << "NOT ENOUGH SPACE\n";
+            return;
+        }
+        newClusters.push_back(newCluster);
+
+        // Copy data from the source cluster to the destination cluster
+        char buffer[CLUSTER_SIZE] = {0};
+        std::ifstream inFile(filename, std::ios::binary);
+        inFile.seekg(desc.data_start_address + cluster * CLUSTER_SIZE);
+        inFile.read(buffer, std::min(CLUSTER_SIZE, remainingSize)); // Only read as much as needed
+
+        std::ofstream outFile(filename, std::ios::binary | std::ios::in | std::ios::out);
+        outFile.seekp(desc.data_start_address + newCluster * CLUSTER_SIZE);
+        outFile.write(buffer, std::min(CLUSTER_SIZE, remainingSize)); // Only write up to actual size
+
+        cluster = fat1[cluster];
+        remainingSize -= CLUSTER_SIZE; // Decrease remaining size by cluster size
+    }
+
+    // Update FAT to mark the end of the copied file's cluster chain
+    for (size_t i = 0; i < newClusters.size(); ++i)
+    {
+        fat1[newClusters[i]] = (i == newClusters.size() - 1) ? FAT_FILE_END : newClusters[i + 1];
+    }
+
+    // Step 5: Add copied file to the destination directory
+    directory_item newFile;
+    std::strcpy(newFile.item_name, newName.c_str());
+    newFile.isFile = true;
+    newFile.size = srcFile->size;
+    newFile.start_cluster = newClusters[0];
+    newFile.parent_id = destDir->id;
+    newFile.id = next_dir_id++;
+
+    destDir->children.push_back(newFile);
+
+    // Step 6: Persist changes to the disk
+    saveToFile();
+
+    std::cout << "OK\n";
+}
+
+bool PseudoFAT::load(const std::string &filePath)
+{
+    std::ifstream commandFile(filePath);
+    if (!commandFile)
+    {
+        return false;
+    }
+
+    std::string line;
+    while (std::getline(commandFile, line))
+    {
+        line = trimWhitespace(line);
+        if (line.empty())
+        {
+            continue;
+        }
+
+        std::istringstream lineStream(line);
+        std::string command;
+        lineStream >> command;
+        std::string arguments;
+        std::getline(lineStream, arguments);
+        arguments = trimWhitespace(arguments);
+
+        if (command == "mkdir")
+        {
+            createDirectory(arguments);
+        }
+        else if (command == "rmdir")
+        {
+            rmdir(arguments);
+        }
+        else if (command == "cd")
+        {
+            changeDirectory(arguments);
+        }
+        else if (command == "ls")
+        {
+            listDirectory(arguments);
+        }
+        else if (command == "pwd")
+        {
+            std::cout << pwd() << "\n";
+        }
+        else if (command == "incp" || command == "outcp" || command == "mv" || command == "cp")
+        {
+            std::istringstream argsStream(arguments);
+            std::string src, dest;
+            argsStream >> src >> dest;
+            if (command == "incp")
+                incp(src, dest);
+            else if (command == "outcp")
+                outcp(src, dest);
+            else if (command == "mv")
+                mv(src, dest);
+            else if (command == "cp")
+                cp(src, dest);
+        }
+        else if (command == "rm")
+        {
+            rm(arguments);
+        }
+        else if (command == "cat")
+        {
+            cat(arguments);
+        }
+        else if (command == "info")
+        {
+            info(arguments);
+        }
+        else
+        {
+            std::cerr << "Unknown command in file: " << command << "\n";
+        }
+    }
+
+    commandFile.close();
+    return true;
+}
+
+std::string PseudoFAT::trimWhitespace(const std::string &str)
+{
+    size_t start = str.find_first_not_of(" \t");
+    size_t end = str.find_last_not_of(" \t");
+    return (start == std::string::npos) ? "" : str.substr(start, end - start + 1);
+}
+
+// void PseudoFAT::listDirectoryByPath(const std::string &path)
+// {
+//     // If no path is provided, list the contents of the current directory
+//     if (path.empty())
+//     {
+//         listDirectory(path);
+//         return;
+//     }
+
+//     // Split the path and determine if it’s absolute or relative
+//     std::vector<std::string> pathParts = splitPath(path);
+//     directory_item *targetDir = nullptr;
+
+//     if (path[0] == '/') // Absolute path
+//     {
+//         targetDir = locateDirectoryOrFile(pathParts, &rootDirectory[0]);
+//     }
+//     else // Relative path
+//     {
+//         targetDir = locateDirectoryOrFile(pathParts, currentDirectory);
+//     }
+
+//     // Check if the target directory was found
+//     if (targetDir != nullptr)
+//     {
+//         listDirectory(targetDir);
+//     }
+//     else
+//     {
+//         std::cerr << "Directory not found.\n";
+//     }
+// }
+
+void PseudoFAT::bug(const std::string &filePath)
+{
+    // Locate the file by path
+    std::vector<std::string> pathParts = splitPath(filePath);
+    directory_item *file = locateDirectoryOrFile(pathParts, &rootDirectory[0]);
+
+    if (!file || !file->isFile)
+    {
+        std::cout << "FILE NOT FOUND\n";
+        return;
+    }
+
+    // Simulate corruption by setting a random cluster in the file’s chain to FAT_BAD_CLUSTER
+    int cluster = file->start_cluster;
+    bool corrupted = false;
+    while (cluster != FAT_FILE_END && cluster >= 0 && cluster < fat1.size())
+    {
+        if (!corrupted) // Corrupt the first valid cluster we find
+        {
+            fat1[cluster] = FAT_BAD_CLUSTER;
+            corrupted = true;
+        }
+        cluster = fat1[cluster];
+    }
+
+    if (corrupted)
+    {
+        std::cout << "OK - File system corrupted for testing\n";
+        saveToFile(); // Save the corrupted state to persist changes
+    }
+    else
+    {
+        std::cout << "Error: Unable to corrupt the file.\n";
+    }
+}
+
+bool PseudoFAT::check()
+{
+    bool corruptionFound = false;
+    bool foundInAnyFile = true;
+    std::vector<directory_item> allFiles = getAllFiles(); // Collect all files
+
+    for (const auto &file : allFiles)
+    {
+        int cluster = file.start_cluster;
+        while (cluster != FAT_FILE_END && cluster >= 0 && cluster < fat1.size())
+        {
+            if (fat1[cluster] == FAT_BAD_CLUSTER)
+            {
+                std::cout << "Corruption detected in file " << file.item_name
+                          << ": Bad cluster " << cluster << " found in its chain.\n";
+                corruptionFound = true;
+                return true;
+                break;
+            }
+            cluster = fat1[cluster];
+        }
+    }
+
+    // Report orphaned bad clusters that aren’t part of any file’s cluster chain
+    for (size_t i = 0; i < fat1.size(); ++i)
+    {
+        // std::cout << "Corruption detected  " << fat1[i] << " == " << FAT_BAD_CLUSTER << "\n";
+        if (fat1[i] == FAT_BAD_CLUSTER)
+        {
+            bool foundInAnyFile = false;
+
+            for (const auto &file : allFiles)
+            {
+                int cluster = file.start_cluster;
+                while (cluster != FAT_FILE_END && cluster >= 0 && cluster < fat1.size())
+                {
+                    // std::cout << "Cluster : " << cluster << " == " << i << std::endl;
+                    if (cluster == i)
+                    {
+                        foundInAnyFile = true;
+                        return true;
+                        break;
+                    }
+                    cluster = fat1[cluster];
+                }
+                if (foundInAnyFile)
+                    break;
+            }
+
+            if (!foundInAnyFile)
+            {
+                std::cout << "Orphaned bad cluster detected at index " << i << ".\n";
+                return true;
+                corruptionFound = true;
+            }
+        }
+    }
+
+    if (!corruptionFound)
+    {
+        std::cout << "File system check complete: No corruption detected.\n";
+        return false;
+    }
+    return false;
+}
+
+std::vector<directory_item> PseudoFAT::getAllFiles()
+{
+    std::vector<directory_item> files;
+    collectFilesRecursively(&rootDirectory[0], files); // Start from the root directory
+    return files;
+}
+
+// Helper method to recursively collect files
+void PseudoFAT::collectFilesRecursively(directory_item *dir, std::vector<directory_item> &files)
+{
+    for (auto &item : dir->children)
+    {
+        if (item.isFile)
+        {
+            files.push_back(item); // Add file to the list
+        }
+        else
+        {
+            // If it's a directory, recursively explore it
+            collectFilesRecursively(&item, files);
+        }
+    }
 }

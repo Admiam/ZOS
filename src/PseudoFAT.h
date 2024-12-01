@@ -64,10 +64,10 @@ class PseudoFAT
 public:
     PseudoFAT(const std::string &filename);
 
-    void formatDisk();
+    bool formatDisk(const std::string &sizeStr);
     bool createDirectory(const std::string &path);
     // void listDirectories(const std::string &path);
-    void listDirectory(const directory_item *dir);
+    void listDirectory(const std::string &filePath);
     bool changeDirectory(const std::string &path);
     directory_item *findDirectoryFromRoot(const std::vector<std::string> &pathParts);
     directory_item *findDirectory(const std::vector<std::string> &pathParts); // Add const
@@ -84,8 +84,16 @@ public:
     void outcp(const std::string &srcPath, const std::string &destPath);
     void rm(const std::string &filePath);
     void mv(const std::string &srcPath, const std::string &destPath);
+    void cp(const std::string &srcPath, const std::string &destPath);
+    bool load(const std::string &filePath);
+    void bug(const std::string &targetFile);
+    bool check();
+    directory_item *locateDirectoryOrFile(const std::vector<std::string> &pathParts, directory_item *startDir);
+    directory_item *locateParentDirectory(const std::vector<std::string> &pathParts);
+    directory_item *locateDirectoryOrFileUsingParentIds(const std::vector<std::string> &pathParts, directory_item *startDir);
 
-private : description desc;
+private: 
+    description desc;
     std::vector<int32_t> fat1;
     std::vector<int32_t> fat2;
     std::vector<directory_item> rootDirectory;
@@ -110,12 +118,13 @@ private : description desc;
     directory_item *findChildDirectory(directory_item *parent, const std::string &name);            // Helper function to find a child directory by name within a given directory
     void writeFileData(std::ofstream &outFile, const directory_item &file);
     bool validateDirectory(const directory_item &dir);
-    directory_item *locateDirectoryOrFile(const std::vector<std::string> &pathParts, directory_item *startDir);
-    directory_item *locateParentDirectory(const std::vector<std::string> &pathParts);
-    directory_item *locateDirectoryOrFileUsingParentIds(const std::vector<std::string> &pathParts, directory_item *startDir);
     directory_item *resolvePath(const std::vector<std::string> &pathParts, directory_item *startDir);
     directory_item *findParentRecursive(int32_t parentId, directory_item *currentDir);
     directory_item *findParent(directory_item *child);
+    std::string trimWhitespace(const std::string &str);
+    void listDirectoryByPath(const std::string &path);
+    std::vector<directory_item> getAllFiles();
+    void collectFilesRecursively(directory_item *dir, std::vector<directory_item> &files);
 };
 
 #endif // PSEUDOFAT_H
