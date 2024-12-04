@@ -86,17 +86,27 @@ int main(int argc, char *argv[])
         }
         else if (command == "incp")
         {
-            std::string srcPath, destPath;
-            size_t splitPos = arg.find(' ');
-            if (splitPos != std::string::npos)
+            // Split the argument into parts
+            std::istringstream stream(arg);
+            std::vector<std::string> parts;
+            std::string part;
+
+            while (stream >> part) // Split by whitespace
             {
-                srcPath = arg.substr(0, splitPos);
-                destPath = arg.substr(splitPos + 1);
-                fs.incp(srcPath, destPath);
+                parts.push_back(part);
             }
-            else
+
+            // Check if there are exactly two arguments
+            if (parts.size() != 2)
             {
                 std::cerr << "Error: incp command requires two arguments (source and destination)\n";
+            }else{
+                // Extract source and destination paths
+                std::string srcPath = parts[0];
+                std::string destPath = parts[1];
+
+                // Call the `incp` function with validated arguments
+                fs.incp(srcPath, destPath);
             }
         }
         else if (command == "cat")
@@ -123,17 +133,29 @@ int main(int argc, char *argv[])
         }
         else if (command == "outcp")
         {
-            std::string srcPath, destPath;
-            size_t splitPos = arg.find(' ');
-            if (splitPos != std::string::npos)
+            // Split the argument into parts
+            std::istringstream stream(arg);
+            std::vector<std::string> parts;
+            std::string part;
+
+            while (stream >> part) // Split by whitespace
             {
-                srcPath = arg.substr(0, splitPos);
-                destPath = arg.substr(splitPos + 1);
-                fs.outcp(srcPath, destPath);
+                parts.push_back(part);
+            }
+
+            // Check if there are exactly two arguments
+            if (parts.size() != 2)
+            {
+                std::cerr << "Error: outcp command requires two arguments (source and destination)\n";
             }
             else
             {
-                std::cerr << "Error: outcp command requires two arguments (source and destination).\n";
+                // Extract source and destination paths
+                std::string srcPath = parts[0];
+                std::string destPath = parts[1];
+
+                // Call the `outcp` function with validated arguments
+                fs.outcp(srcPath, destPath);
             }
         }
         else if (command == "rm")
@@ -149,32 +171,56 @@ int main(int argc, char *argv[])
         }
         else if (command == "mv")
         {
-            std::string srcPath, destPath;
-            size_t splitPos = arg.find(' ');
-            if (splitPos != std::string::npos)
+            // Split the argument into parts
+            std::istringstream stream(arg);
+            std::vector<std::string> parts;
+            std::string part;
+
+            while (stream >> part) // Split by whitespace
             {
-                srcPath = arg.substr(0, splitPos);
-                destPath = arg.substr(splitPos + 1);
-                fs.mv(srcPath, destPath);
+                parts.push_back(part);
+            }
+
+            // Check if there are exactly two arguments
+            if (parts.size() != 2)
+            {
+                std::cerr << "Error: incp command requires two arguments (source and destination)\n";
             }
             else
             {
-                std::cerr << "Error: mv command requires two arguments (source and destination)\n";
+                // Extract source and destination paths
+                std::string srcPath = parts[0];
+                std::string destPath = parts[1];
+
+                // Call the `incp` function with validated arguments
+                fs.mv(srcPath, destPath);
             }
         }
         else if (command == "cp")
         {
-            std::string srcPath, destPath;
-            size_t splitPos = arg.find(' ');
-            if (splitPos != std::string::npos)
+            // Split the argument into parts
+            std::istringstream stream(arg);
+            std::vector<std::string> parts;
+            std::string part;
+
+            while (stream >> part) // Split by whitespace
             {
-                srcPath = arg.substr(0, splitPos);
-                destPath = arg.substr(splitPos + 1);
-                fs.cp(srcPath, destPath);
+                parts.push_back(part);
+            }
+
+            // Check if there are exactly two arguments
+            if (parts.size() != 2)
+            {
+                std::cerr << "Error: incp command requires two arguments (source and destination)\n";
             }
             else
             {
-                std::cerr << "Error: cp command requires two arguments (source and destination)\n";
+                // Extract source and destination paths
+                std::string srcPath = parts[0];
+                std::string destPath = parts[1];
+
+                // Call the `incp` function with validated arguments
+                fs.cp(srcPath, destPath);
             }
         }
         else if (command == "format")

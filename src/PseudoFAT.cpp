@@ -147,7 +147,6 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
         }
 
         outFile.close();
-        std::cout << "File system saved.\n";
     }
 
     void PseudoFAT::saveDirectory(std::ofstream &outFile, const directory_item &dir)
@@ -783,7 +782,11 @@ bool PseudoFAT::incp(const std::string &srcPath, const std::string &destPath)
     if (isDirectoryPath)
     {
         // If the path ends with '/', treat the last component as a directory
-        targetDir = destPath[0] == '/' ? findDirectoryFromRoot(pathParts) : findDirectory(pathParts);
+        targetDir = (destPath[0] == '/')
+                        ? locateDirectoryOrFile(pathParts, &rootDirectory[0]) // Absolute path
+                        : locateDirectoryOrFile(pathParts, currentDirectory); // Relative path
+
+        // targetDir = destPath[0] == '/' ? findDirectoryFromRoot(pathParts) : findDirectory(pathParts);
         if (!targetDir || targetDir->isFile)
         {
             std::cerr << "PATH NOT FOUND\n";
@@ -1135,15 +1138,12 @@ void PseudoFAT::outcp(const std::string &srcPath, const std::string &destPath)
     std::vector<std::string> srcPathParts = splitPath(srcPath);
     directory_item *srcFile = nullptr;
 
-    if (srcPath[0] == '/') // Absolute path
-    {
-        srcFile = locateDirectoryOrFile(srcPathParts, &rootDirectory[0]);
-    }
-    else // Relative path
-    {
-        srcFile = locateDirectoryOrFile(srcPathParts, currentDirectory);
-    }
+    // If the path ends with '/', treat the last component as a directory
+    srcFile = (srcPath[0] == '/')
+                  ? locateDirectoryOrFile(srcPathParts, &rootDirectory[0]) // Absolute path
+                  : locateDirectoryOrFile(srcPathParts, currentDirectory); // Relative path
 
+    
     if (!srcFile || !srcFile->isFile) // Ensure it is a file, not a directory
     {
         std::cout << "FILE NOT FOUND\n";
@@ -1263,7 +1263,7 @@ void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
     std::vector<std::string> srcPathParts = splitPath(srcPath);
     if (srcPathParts.empty())
     {
-        std::cout << "FILE NOT FOUND\n";
+        std::cout << "FILE NOT FOUND (není zdroj)\n";
         return;
     }
 
@@ -1273,19 +1273,34 @@ void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
 
     if (!srcItem || srcItem->isFile == false)
     { // Ensure the source item exists and is a file
-        std::cout << "FILE NOT FOUND\n";
+        std::cout << "FILE NOT FOUND (není zdroj)\n";
         return;
     }
 
     // Determine the destination directory and possible new name
     std::vector<std::string> destPathParts = splitPath(destPath);
+
+    // Check if the destination path ends with a '/'
+    if (destPath.back() == '/')
+    {
+        std::cout << "PATH NOT FOUND (neexistuje cílová cesta)\n";
+        return;
+    }
+
+    // Check if the destination path includes a valid name
+    if (destPathParts.empty() || destPathParts.back().empty() || destPathParts.back() == "/" || destPathParts.back() == ".")
+    {
+        std::cout << "PATH NOT FOUND (neexistuje cílová cesta)\n";
+        return;
+    }
+
     directory_item *destDir = (destPath[0] == '/')
                                   ? resolvePath({destPathParts.begin(), destPathParts.end() - 1}, &rootDirectory[0]) // Absolute path
                                   : resolvePath({destPathParts.begin(), destPathParts.end() - 1}, currentDirectory); // Relative path
 
     if (!destDir || destDir->isFile)
     {
-        std::cout << "PATH NOT FOUND\n";
+        std::cout << "PATH NOT FOUND (neexistuje cílová cesta)\n";
         return;
     }
 
@@ -1301,24 +1316,35 @@ void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
                 std::cout << "SAME NAME\n";
                 return;
             }
-            else
-            {
-                destDir = const_cast<directory_item *>(&child);
-                // Move to subdirectory if name matches a directory
-                newName = trimItemName(srcItem->item_name); // Keep original name in the subdirectory
-                nameConflict = true;
-                break;
-            }
+            // else
+            // {
+            //     destDir = const_cast<directory_item *>(&child);
+            //     // Move to subdirectory if name matches a directory
+            //     newName = trimItemName(srcItem->item_name); // Keep original name in the subdirectory
+            //     std::cout << "New name is: " << newName << " from " << trimItemName(srcItem->item_name) << '\n';
+            //     nameConflict = true;
+            //     break;
+            // }
         }
     }
 
+    // if (nameConflict)
+    // {
+    //     for (const auto &child : destDir->children)
+    //     {
+    //         if (trimItemName(child.item_name) == newName)
+    //         {
+    //             std::cout << "SAME NAME\n";
+    //             return;
+    //         }
+    //     }
+    // }
     directory_item *srcParent = (srcItem->parent_id == -1) ? &rootDirectory[0] : findParent(srcItem);
+
+
 
     if (srcParent)
     {
-        // std::cout << "Located parent directory: " << trimItemName(srcParent->item_name)
-        //           << " (ID: " << srcParent->id << ")\n";
-
         // Check if the parent is the root directory
         if (srcParent == &rootDirectory[0])
         {
@@ -1328,72 +1354,35 @@ void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
                                [&](const directory_item &item)
                                {
                                    // Compare both the ID and name to avoid accidental deletion of similarly named items
-                                   bool isMatch = (item.id == srcItem->id && trimItemName(item.item_name) == trimItemName(srcItem->item_name));
-
-                                   // Debug output to confirm when a match is found
-                                   if (isMatch)
-                                   {
-                                    //    std::cout << "Match found for removal: " << trimItemName(item.item_name)
-                                    //              << " (ID: " << item.id << ")\n";
-                                   }
+                                   bool isMatch = (item.id == srcItem->id && trimItemName(item.item_name) == trimItemName(srcItem->item_name));                                  
                                    return isMatch;
                                }),
                 srcParent->children.end());
-
-            // Confirm rootDirectory contents after removal
-            for (const auto &item : rootDirectory)
-            {
-                // std::cout << "Remaining item - Name: " << trimItemName(item.item_name)
-                //           << ", ID: " << item.id << '\n';
-            }
         }
         else
         {
-            // std::cout << "Parent is a subdirectory: " << trimItemName(srcParent->item_name) << "\n";
-
             // Remove srcItem from its parent directory (subdirectory)
             srcParent->children.erase(
                 std::remove_if(srcParent->children.begin(), srcParent->children.end(),
                                [&](const directory_item &item)
                                {
-                                //    std::cout << "Checking child item with name: " << trimItemName(item.item_name)
-                                //              << " and ID: " << item.id << '\n';
                                    // Explicitly compare the ID instead of pointer address
                                    bool isMatch = (item.id == srcItem->id && trimItemName(item.item_name) == trimItemName(srcItem->item_name));
-                                   if (isMatch)
-                                   {
-                                    //    std::cout << "Match found in subdirectory for removal: " << trimItemName(item.item_name)
-                                    //              << " (ID: " << item.id << ")\n";
-                                   }
                                    return isMatch;
                                }),
                 srcParent->children.end());
-
-            
-            // Confirmsubdirectory contents after removal
-            for (const auto &child : srcParent->children)
-            {
-                // std::cout << "Remaining child item - Name: " << trimItemName(child.item_name)
-                //           << ", ID: " << child.id << '\n';
-            }
         }
-        // std::cout << "Removed item from parent directory: " << trimItemName(srcParent->item_name) << "\n";
-    }
-    else
-    {
-        std::cout << "Could not find the parent directory for item: " << trimItemName(srcItem->item_name)
-                  << " (ID: " << srcItem->id << ")\n";
     }
 
     // Create a copy of the item with updated attributes for the destination directory
     directory_item movedItem = *srcItem;
     movedItem.parent_id = destDir->id;
+    std::cout << "New item name: " << newName << '\n';
     std::strcpy(movedItem.item_name, newName.c_str());
-
+    std::cout << "Moved item name: " << movedItem.item_name << '\n';
+    movedItem.id = srcItem->id;
     // Add the moved item to the destination directory
     destDir->children.push_back(movedItem);
-
-    std::cout << "Moved item successfully to destination directory with ID: " << destDir->id << "\n";
 
     // Save changes to the .dat file to persist the move
     saveToFile();
@@ -1451,30 +1440,56 @@ void PseudoFAT::cp(const std::string &srcPath, const std::string &destPath)
 
     if (!srcFile || !srcFile->isFile)
     {
-        std::cout << "FILE NOT FOUND\n";
+        std::cout << "FILE NOT FOUND (není zdroj)\n";
         return;
     }
 
     // Step 2: Locate the destination directory
     std::vector<std::string> destPathParts = splitPath(destPath);
+
+    if (destPathParts.empty() || destPathParts.back().empty())
+    {
+        std::cout << "PATH NOT FOUND (neexistuje cílová cesta)\n";
+        return;
+    }
+
     directory_item *destDir = (destPath[0] == '/')
                                   ? locateDirectoryOrFile({destPathParts.begin(), destPathParts.end() - 1}, &rootDirectory[0]) // Absolute path
                                   : locateDirectoryOrFile({destPathParts.begin(), destPathParts.end() - 1}, currentDirectory); // Relative path
 
     if (!destDir || destDir->isFile)
     {
-        std::cout << "PATH NOT FOUND\n";
+        std::cout << "PATH NOT FOUND (neexistuje cílová cesta)\n";
+        return;
+    }
+
+    // Check if the destination path ends with a '/'
+    if (destPath.back() == '/')
+    {
+        std::cout << "PATH NOT FOUND (neexistuje cílová cesta)\n";
+        return;
+    }
+
+    // Check if the destination path includes a valid name
+    if (destPathParts.empty() || destPathParts.back().empty() || destPathParts.back() == "/" || destPathParts.back() == ".")
+    {
+        std::cout << "Error: Destination path must include a name.\n";
         return;
     }
 
     // Step 3: Check for duplicate file name in the destination
+    bool nameConflict = false;
+
     std::string newName = destPathParts.back();
     for (const auto &child : destDir->children)
     {
         if (trimItemName(child.item_name) == newName)
         {
-            std::cout << "SAME NAME\n";
-            return;
+            if (child.isFile)
+            {
+                std::cout << "SAME NAME\n";
+                return;
+            }
         }
     }
 
