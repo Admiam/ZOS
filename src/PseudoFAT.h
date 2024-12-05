@@ -86,7 +86,7 @@ public:
     void mv(const std::string &srcPath, const std::string &destPath);
     void cp(const std::string &srcPath, const std::string &destPath);
     bool load(const std::string &filePath);
-    void bug(const std::string &targetFile);
+    bool bug(const std::string &targetFile);
     bool check();
     directory_item *locateDirectoryOrFile(const std::vector<std::string> &pathParts, directory_item *startDir);
     directory_item *locateParentDirectory(const std::vector<std::string> &pathParts);

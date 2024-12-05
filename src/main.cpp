@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
             // Check if there are exactly two arguments
             if (parts.size() != 2)
             {
-                std::cerr << "Error: incp command requires two arguments (source and destination)\n";
+                std::cerr << "Error: mv command requires two arguments (source and destination)\n";
             }
             else
             {
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
             // Check if there are exactly two arguments
             if (parts.size() != 2)
             {
-                std::cerr << "Error: incp command requires two arguments (source and destination)\n";
+                std::cerr << "Error: cp command requires two arguments (source and destination)\n";
             }
             else
             {
@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
                 if (fs.formatDisk(arg))
                 {
                     isCorrupted = false;
-                    std::cout << "OK\n";
+                    // std::cout << "OK\n";
                 }
                 else
                 {
@@ -250,13 +250,32 @@ int main(int argc, char *argv[])
         {
             if (!arg.empty())
             {
-                fs.bug(arg);
-                isCorrupted = true;
-                std::cout << "OK\n";
+                if(fs.bug(arg))
+                {
+                    isCorrupted = true;
+                }
             }
             else
             {
                 std::cerr << "Error: bug command requires a file path.\n";
+            }
+        }
+        else if (command == "load")
+        {
+            if (!arg.empty())
+            {
+                if (fs.load(arg))
+                {
+                    std::cout << "OK\n";
+                }
+                else
+                {
+                    std::cout << "CANNOT LOAD FILE\n";
+                }
+            }
+            else
+            {
+                std::cerr << "Error: load command requires a file path.\n";
             }
         }
         else

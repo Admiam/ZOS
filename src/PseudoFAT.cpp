@@ -511,8 +511,8 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
         }
 
         // Case 2: Handle "cd .." (move to parent directory)
-        std::cout << "Current directory: " << currentDirectory->item_name << ", ID: " << currentDirectory->id
-                  << ", Parent ID: " << currentDirectory->parent_id << std::endl;
+        // std::cout << "Current directory: " << currentDirectory->item_name << ", ID: " << currentDirectory->id
+        //           << ", Parent ID: " << currentDirectory->parent_id << std::endl;
 
         if (path == "..")
         {
@@ -528,12 +528,13 @@ bool PseudoFAT::formatDisk(const std::string &sizeStr)
             if (parentDir)
             {
                 currentDirectory = parentDir; // Move to the parent directory
-                std::cout << "Moved to parent: " << currentDirectory->item_name << '\n';
+                // std::cout << "Moved to parent: " << currentDirectory->item_name << '\n';
+                std::cout << "OK" << '\n';
                 return true;
             }
             else
             {
-                std::cerr << "Parent directory not found.\n";
+                std::cerr << "FILE NOT FOUND (neexistující adresář)\n";
                 return false;
             }
         }
@@ -700,7 +701,7 @@ bool PseudoFAT::rmdir(const std::string &path)
 
     if (!parentDir)
     {
-        std::cerr << "Parent directory not found.\n";
+        std::cerr << "FILE NOT FOUND (neexistující adresář)\n";
         return false;
     }
 
@@ -841,7 +842,7 @@ bool PseudoFAT::incp(const std::string &srcPath, const std::string &destPath)
     for (int i = 0; i < requiredClusters; ++i)
     {
         int freeCluster = allocateCluster();
-        std::cout << "Allocated cluster: " << freeCluster << '\n';
+        // std::cout << "Allocated cluster: " << freeCluster << '\n';
         if (freeCluster == -1)
         {
             std::cerr << "NOT ENOUGH SPACE\n";
@@ -858,7 +859,7 @@ bool PseudoFAT::incp(const std::string &srcPath, const std::string &destPath)
         outFile.seekp(desc.data_start_address + allocatedClusters[i] * CLUSTER_SIZE);
         outFile.write(buffer, CLUSTER_SIZE);
 
-        std::cout << "Writing to cluster: " << allocatedClusters[i] << '\n';
+        // std::cout << "Writing to cluster: " << allocatedClusters[i] << '\n';
         
         if (i < requiredClusters - 1)
         {
@@ -1377,9 +1378,9 @@ void PseudoFAT::mv(const std::string &srcPath, const std::string &destPath)
     // Create a copy of the item with updated attributes for the destination directory
     directory_item movedItem = *srcItem;
     movedItem.parent_id = destDir->id;
-    std::cout << "New item name: " << newName << '\n';
+    // std::cout << "New item name: " << newName << '\n';
     std::strcpy(movedItem.item_name, newName.c_str());
-    std::cout << "Moved item name: " << movedItem.item_name << '\n';
+    // std::cout << "Moved item name: " << movedItem.item_name << '\n';
     movedItem.id = srcItem->id;
     // Add the moved item to the destination directory
     destDir->children.push_back(movedItem);
@@ -1665,16 +1666,31 @@ std::string PseudoFAT::trimWhitespace(const std::string &str)
 //     }
 // }
 
-void PseudoFAT::bug(const std::string &filePath)
+bool PseudoFAT::bug(const std::string &filePath)
 {
+    std::istringstream stream(filePath);
+    std::vector<std::string> parts;
+    std::string part;
+
+    while (stream >> part) // Split path by whitespace
+    {
+        parts.push_back(part);
+    }
+
+    if (parts.size() != 1 || parts.empty()) // Check for exactly one part
+    {
+        std::cerr << "INVALID PATH\n";
+        return false;
+    }
+
     // Locate the file by path
     std::vector<std::string> pathParts = splitPath(filePath);
     directory_item *file = locateDirectoryOrFile(pathParts, &rootDirectory[0]);
 
-    if (!file || !file->isFile)
+    if (!file || !file->isFile )
     {
         std::cout << "FILE NOT FOUND\n";
-        return;
+        return false;
     }
 
     // Simulate corruption by setting a random cluster in the file’s chain to FAT_BAD_CLUSTER
@@ -1692,12 +1708,14 @@ void PseudoFAT::bug(const std::string &filePath)
 
     if (corrupted)
     {
-        std::cout << "OK - File system corrupted for testing\n";
+        std::cout << "OK\n";
         saveToFile(); // Save the corrupted state to persist changes
+        return true;
     }
     else
     {
         std::cout << "Error: Unable to corrupt the file.\n";
+        return false;
     }
 }
 
@@ -1753,8 +1771,8 @@ bool PseudoFAT::check()
             if (!foundInAnyFile)
             {
                 std::cout << "Orphaned bad cluster detected at index " << i << ".\n";
-                return true;
                 corruptionFound = true;
+                return true;
             }
         }
     }
