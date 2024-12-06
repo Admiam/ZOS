@@ -1,0 +1,14 @@
+Vytvořte uživatelský profil SECURE, který bude vyžadovat změnu hesla každých 30 dní a bude kontrolovat heslo tak, aby obsahovalo nejméně jedno velké písmeno, nejméně jedno malé písmeno, nejméně jednu číslici a mělo minimálně 8 znaků - vypracujte samostatně - první získává bod
+Vytvořte uživatele SPCUSER, přiřaďte mu default tablespace users, default profile SECURE a heslo vytvořte tak, aby splňovalo potřebné požadavky
+Dejte uživateli SPCUSER taková práva (bude jich hodně), aby mohl úspěšně provést příkaz select * from v$session, a ze získaných dat pak mohl vytvořit tabulku UZIVATELE se sloupci USERNAME, PROGRAM a LOGON_TIME, což budou stejnojmenné sloupečky jako v pohledu V$SESSION. (jde o tabulku aktuálně přihlášených uživatelů k vaší DB) a přidejte pro tabulku PUBLIC synonymum - vypracujte samostatně  - první získává bod!
+Přidejte k tabulce UZIVATELE sloupeček POZNAMKA (string, max 2000 znaků)
+Vytvořte uživatele MUJUSER stejně jako uživatele SPCUSER (kromě práv na vytváření tabulek a přístupu v V$SESSION)
+Nastavte pro uživatele MUJUSER práva SUID na tabulku UZIVATELE
+Vytvořte si dvě paralelní připojení - jedno pod uživatelem SPCUSER a druhé pod uživatelem MUJUSER
+Pod uživatelem MUJUSER zadejte příkaz: UPDATE UZIVATELE SET POZNAMKA='Fiktivní připojení' where USERNAME IS NULL a transakci NEPOTVRZUJTE!
+Pod uživatelem SPCUSER zadejte příkaz: DELETE FROM UZIVATELE WHERE PROGRAM like '%LG%' - vysvětlete vzniklou situaci
+Transakci pod uživatelem MUJUSER odvolejte - co se stane  s transakcí uživatele SPCUSER?
+Opět zadejte pod uživatelem MUJUSER příkaz: UPDATE UZIVATELE SET POZNAMKA='Fiktivní připojení' where USERNAME IS NULL a transakci NEPOTVRZUJTE!
+Pod uživatelem SPCUSER zadejte příkaz: ALTER TABLE UZIVATELE ADD ID_UZIVATELE number - opět vysvětlete vzniklou situaci
+Spusťte SQL Developer, v menu Tools vyberte Monitoring sessions. Najděte ta připojení, u kterých se ve spodní části v záložce Contention objeví nějaké záznamy.
+Najděte připojení, na které se čeká a toto připojení pomocí volby Kill session odpojte.

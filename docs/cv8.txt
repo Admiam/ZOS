@@ -1,0 +1,205 @@
+Vhodné je toto zadání řešit ve tříčlenném týmu. Lze jej řešit i v menším počtu, jen je potřeba dodržet pokyny níže. Tři je ale maximum.
+
+1. Zkontrolujte, že databáze běží v ARCHIVELOG režimu, pokud ne, nastavte jej - viz přednáška ZÁLOHOVÁNÍ
+2. Nastavte inicializační parametr  db_recovery_file_dest_size na hodnotu  500G
+3. Spusťte recovery manager - RMAN a nastavte retention policy na 10 dní
+----------------------------------------------------------------------------------------------------------------------
+4. Nastavte strategii vlastního zálohování
+• Backup set - 1. člen týmu
+• Compressed backup set - 2. člen týmu
+• Image copies – 3. člen týmu
+
+Pokud nemá váš tým 3 členy, lze vše postupně udělat na jednom virtuáním serveru. Je ale potřeba kroky 5 a 6 provést vždy po každou metodu.
+
+5. Databázi zazálohujte – použijte pouze jednoduchý příkaz backup database, změřte přitom dobu zálohování  (stopky) a zjistěte použité místo na disku pro jednu zálohu. Zálohu najdete ve Fast recovery area v adresářích autobackup+backupset pro typ Backup set a Compressed backup set a v adresářích autobackup+datafile pro typ Image copies. Zapište si čas a velikost a soubory fyzicky smažte z disku
+6. Postup v jednom týmu zopakujte nejméně 10x a výsledky zprůměrujte. Záloha se většinou skládá z více souborů, vždy je potřeba sečíst velikost všech z nich. Názvy souborů se v průběhu zálohování vypisují na obrazovce. Pro účely tohoto cvičení lze zanedbat velikosti souborů ve složce autobackup, což jsou zálohy controlfile a spfile. Vzhledem k velikosti datových souborů mají tyto soubory zanedbatelnou velikost.
+
+7. Smažte záznamy o zálohách v RMANovi pomocí příkazů crosscheck backup a delete expired backup Pokud zálohy nesmažete, narostou vám bohužel poplatky za virtuální server. Dejte si na to pozor.
+8. Na tabuli napište za každý tým vždy 6 hodnot - průměrné časy všech tří metod a průměrné velikosti všech tří metod
+
+Pokud budou hodnoty relevantní a tým stihne tento úkol do konce cvičení, získá každý člen týmu jeden bod do závěrečného hodnocení
+
+
+
+Opět je vhodná týmová spolupráce ideálně ve stejném složení jako při zálohování databáze. Nicméně celý úkol lze samozřejmě zvládnout i coby jednotlivec. Maximální počet členů týmu je 3.
+
+1. Zazálohujte databázi – bez ohledu na default nastavení použijte příkaz (ideálně každou metodu vždy jeden člen týmu):
+• Backup as backupset database
+• Backup as compressed backupset database
+• Backup as copy database
+
+2. Databázi uzavřete
+
+3. Smažte všechny datové soubory ze složky /opt/oracle/oradata/ORCL/datafile
+
+4. Databázi obnovte - v případě image copies použijte metodu switch a následné přejmenování souborů, změřte přitom časy příkazů switch resp. restore a následně i recover, oba časy sečtěte
+• Pro Backupset a Compressed backupset obnovte databázi dle stránky 14 přednášky Obnova databáze
+• Pro Image copies obnovte databázi dle stránky 16 přednášky Obnova databáze. Vzhledem k tomu, že používáme tzv. Oracle Managed Files, použijte pro přesun souborů do originálního umístění příkaz
+
+alter database move datafile 1;
+
+kde jedničku nahraďte postupně všemi čísly jednotlivých datových souborů. Ta získáte příkazem
+
+select file#,name from v$datafile;
+
+Jako celkový čas ale počítejte pouze čas příkazu switch a recover, protože při kopírování na původní umístění již databáze běží.
+
+5. Zkontrolujte, že databáze běží.
+
+Pro každou metodu proveďte měření času 5x (je nutné provést všechny body 1 až 5). Na tabuli napište vždy za každý tým tři čísla - průměry pro jednotlivé metody.
+
+Na závěr smažte všechny tálohu z dnešního cvičení.
+
+
+Příprava cvičení:
+
+Změňte nastavení zálohování takto:
+
+Smažte všechny stávající zálohy a archivní logy (archivní logy ze všech umístění)
+¨
+Proveďte v RMANu
+
+crosscheck záloh a archivních logů 
+- crosscheck backup 
+- crosscheck archivelog all
+Smažte EXPIRED zálohy a archivní logy 
+- delete expired backup
+- delete expired archivelog all
+Tím máme srovnaný skutečný stav na disku a obsah controlfile
+Nastavte zálohu na compressed backupset příkazem backup database udělejte základní zálohu databáze pro toto cvičení
+
+
+Scénáře obnovy DB:
+
+Vyzkoušejte následující scénáře – každý zvlášť. Smažte
+Systémovou tablespace (SYSTEM) (/opt/oracle/oradata/ORCL/datafile/o1_mf_system_xxx)
+Uživatelskou tablespace (USERS)  (/opt/oracle/oradata/ORCL/datafile/o1_mf_users_xxx)
+Jednu z kopií controlfile  (/opt/oracle/oradata/ORCL/controlfile/o1_mf_xxx.ctl)
+Všechny controlfile -  (/opt/oracle/oradata/ORCL/controlfile/o1_mf_xxx.ctl a /opt/oracle/fast_recovery_area/ORCL/controlfile//o1_mf_xxx.ctl)
+Jeden z online redologů -  (/opt/oracle/oradata/ORCL/onlinelog/o1_mf_1_xxx)
+Jednu skupinu redologů -  (/opt/oracle/oradata/ORCL/onlinelog/o1_mf_1_xxx a  
+/opt/oracle/fast_recovery_area/ORCL/onlinelog//o1_mf_1_xxx)
+Všechny redology  (/opt/oracle/oradata/ORCL/onlinelog/* a 
+/opt/oracle/fast_recovery_area/ORCL/onlinelog//*)
+Kombinace předchozího např. jednu kopii controlfile a jeden redolog
+Databáze pro verifikaci struktury používá tzv. health monitor, který se spouští každých 5 minut. Pro urychlení je možno jej spusťit ručně příkazem exec DBMS_HM.RUN_CHECK('DB Structure Integrity Check');
+Pokud to lze, použijte recovery advisor a databázi obnovte. Použijte příkazy:
+List failure
+Advise failure
+Repair failure preview
+Repair failure
+Pokud nelze, použijte příkazy pro kompletní obnovu databáze
+
+Pro obnovu redologů za chodu databáze použijte příkazy:
+
+Najděte, který redolog je INVALID - select group#,member from v$logfile where status='INVALID';
+
+Nejjednodušší způsob opravy je zrušit celou skupinu a založit ji znovu pomocí příkazů:
+ALTER DATABASE DROP LOGFILE GROUP xxx:
+ALTER DATABASE ADD LOGFILE GROUP xxx:
+kde xxx je číslo skupiny z předchozího příkazu
+V případě, že databáze vypíše chybu, že daná skupina je aktuální a nelze ji tudíž modifikovat, zadejte příkaz
+ALTER SYSTEM SWITCH LOGFILE;
+Tím se stane aktivní následující skupina a s touto skupinou již bude možné pracovat.
+
+
+
+Ze souboru hodnocení studentů vystaveného na těchto stránkách  vytvořte externí tabulku HODNOCENI_EXT ve schématu uživatele SYSTEM. Vytvořte selekt tak, aby na prvním místě vybral studenta s nejvyšším součtem bodů a na posledním toho s nejnižším počtem bodů. Sreenshot seznamu vytvořený v programu SQL Developer v čitelné podobě !!! zkopírujte do classroomu. Prvních pět z vás získá poslední bod do závěrečného hodnocení.
+
+Pokyny
+Nejjednodušší je zřejmě z excelovského souboru vytvořit soubor CSV a ten dále zpracovávat
+Soubor by měl být v UTF, jinak je potřeba nastavit proměnnou prostředí NLS_LANG. (Např. pro standardní windows kódování CP1250 takto export NLS_LANG='CZECH_CZECH REPUBLIC.EE8MSWIN1250')
+Použijte buď  některý z již existujících Oracle Directory  (např. DATA_PUMP_DIR ukazuje do /opt/oracle/admin/orcl/dpdump) nebo si vytvořte vlastní Oracle Directory
+Tabulku založte příkazem podle vzoru z přednášky Přesuny dat - Externí tabulky ORACLE_LOADER
+Pokud příkaz select * from hodnoceni_ext skončí chybou, log s popisem této chyby najdete ve stejném adresáři, kde je umístěn soubor s daty
+Výsledkem bude select jména, příjmení a počtu (součtu všech)  bodů seřazený podle počtu bodů od největšího k nejmenšímu,
+
+
+Zkontrolujte případně  nastavte:
+Archivelog režimu
+Nastavení controlfile autobackup v RMANu na ON
+Fyzické místo na disku – v případě nedostatku místa smažte zálohy z minulých cvičení
+Typ zálohování - compressed backupset
+Nastavte retention na redundancy 1
+Velikost Flash recovery area nejméně 200G
+Zkontrolujte rudundatnost
+Řídících souborů - použijte skript control.sql
+Transakčního žurnálu (archivních logů) - použijte skript arch.sql
+Online redologů - použijte skript redo.sql
+Zkontrolujte existenci alespoň jedné zálohy - použijte script backup.sql
+
+Řídící soubory
+Musí existovat nejméně dvě kopie. Další nelze přidat za běhu databáze, Nejprve přidejte nový soubor do inicializačního parametru control files (v přákazu musí zůstat i ty původní)
+
+
+alter system set control_files='/opt/oracle/oradata/ORCL/controlfile/o1_mf_mh3h95rl_.ctl, /opt/oracle/fast_recovery_area/ORCL/controlfile/o1_mf_mh3h95tt_.ctl,/home/oracle/control.bak' scope=spfile;
+
+Poté databázi zastavete a zkpírujte jeden z existujícíh řídících souborů do nového umístění. Pak databázi opět nastartujte
+
+Transakční žurnál - archivní logy
+
+Musí existovat nejméně dvě kopie všech archivních logů. Pokud není nastaven žádný inicializační parametr LOG_ARCHIVE_DEST_x, archivní llogy se defaultně vytváří ve fast recovery area. Pokud chceme multiplexovat, mási se nastavit dva parametry. Nastavte tedy multiplexování archivních logů do adresáře  /home/oracle/multiplex/arch (adresář nejprve vytvořte) a do něj nastavte multiplexování. Nastavte tedy příslušné  parametry následovně:
+alter system set LOG_ARCHIVE_DEST_1='LOCATION=USE_DB_RECOVERY_FILE_DEST';
+alter system set LOG_ARCHIVE_DEST_2='LOCATION=/home/oracle/multiplex/arch';
+Transakční žurnál - online redology
+
+Každý skupina musí mít alespoň dva členy,. Pro přidání dalšího člena do všech skupin nepjprve vytvořte adresář pto tyto členy /home/oracle/multiplex/redo a poté přidejte jednotlivé členy pomocí příkazů:
+
+alter database add logfile member  '/home/oracle/multiplex/redo/redo01.log' to group 1, 
+alter database add logfile member  '/home/oracle/multiplex/redo/redo02.log' to group 2;   
+alter database add logfile member  '/home/oracle/multiplex/redo/redo03.log' to group 3;
+
+redo.sql:
+SELECT 
+    l.GROUP# AS LOG_GROUP,
+    case 
+    when count(*)>1 then count(*)||' OK' 
+    else count(*)||' ERROR' end POCET
+FROM 
+    V$LOG l, V$LOGFILE lf
+    where l.GROUP# = lf.GROUP#
+    group by l.GROUP#
+ORDER BY 
+    l.GROUP#;
+
+
+control.sql:
+select 
+case
+when count(*)>1 then count(*)||' OK'
+else count(*)||' Chyba' 
+end controlfiles from v$controlfile;
+
+backup.sql:
+SELECT
+    bs.START_TIME AS BACKUP_DATE,
+    bs.COMPLETION_TIME AS BACKUP_COMPLETION,
+    bp.HANDLE AS BACKUP_LOCATION,
+    bdf.CHECKPOINT_CHANGE# AS SCN,
+    CASE
+        WHEN bs.CONTROLFILE_INCLUDED = 'YES' THEN 'Autobackup'
+        ELSE CASE
+            WHEN bs.BACKUP_TYPE = 'D' THEN 'Datafile Backupset'
+            WHEN bs.BACKUP_TYPE = 'I' THEN 'Incremental Backupset'
+            WHEN bs.BACKUP_TYPE = 'L' THEN 'Archive Log Backupset'
+            ELSE 'Other Backupset'
+        END
+    END AS BACKUP_TYPE
+FROM V$BACKUP_SET bs, V$BACKUP_PIECE bp,  V$BACKUP_DATAFILE bdf
+where  bs.SET_STAMP = bp.SET_STAMP AND bs.SET_COUNT = bp.SET_COUNT
+AND    bs.SET_STAMP = bdf.SET_STAMP AND bs.SET_COUNT = bdf.SET_COUNT
+ORDER By  bs.START_TIME DESC;
+
+
+arch.sql:
+SELECT 
+case
+when count(*)>1 then count(*)||' OK'
+else count(*)||' ERROR'
+end archivelog_dets 
+FROM 
+    V$ARCHIVE_DEST
+WHERE 
+    STATUS = 'VALID' -- Pouze aktivní a platné destinace
+ORDER BY 
+    DEST_ID;

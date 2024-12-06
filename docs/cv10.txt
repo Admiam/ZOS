@@ -1,0 +1,50 @@
+Příprava cvičení:
+
+Změňte nastavení zálohování takto:
+
+Smažte všechny stávající zálohy a archivní logy (archivní logy ze všech umístění)
+¨
+Proveďte v RMANu
+
+crosscheck záloh a archivních logů 
+- crosscheck backup 
+- crosscheck archivelog all
+Smažte EXPIRED zálohy a archivní logy 
+- delete expired backup
+- delete expired archivelog all
+Tím máme srovnaný skutečný stav na disku a obsah controlfile
+Nastavte zálohu na compressed backupset příkazem backup database udělejte základní zálohu databáze pro toto cvičení
+
+
+Scénáře obnovy DB:
+
+Vyzkoušejte následující scénáře – každý zvlášť. Smažte
+Systémovou tablespace (SYSTEM) (/opt/oracle/oradata/ORCL/datafile/o1_mf_system_xxx)
+Uživatelskou tablespace (USERS)  (/opt/oracle/oradata/ORCL/datafile/o1_mf_users_xxx)
+Jednu z kopií controlfile  (/opt/oracle/oradata/ORCL/controlfile/o1_mf_xxx.ctl)
+Všechny controlfile -  (/opt/oracle/oradata/ORCL/controlfile/o1_mf_xxx.ctl a /opt/oracle/fast_recovery_area/ORCL/controlfile//o1_mf_xxx.ctl)
+Jeden z online redologů -  (/opt/oracle/oradata/ORCL/onlinelog/o1_mf_1_xxx)
+Jednu skupinu redologů -  (/opt/oracle/oradata/ORCL/onlinelog/o1_mf_1_xxx a  
+/opt/oracle/fast_recovery_area/ORCL/onlinelog//o1_mf_1_xxx)
+Všechny redology  (/opt/oracle/oradata/ORCL/onlinelog/* a 
+/opt/oracle/fast_recovery_area/ORCL/onlinelog//*)
+Kombinace předchozího např. jednu kopii controlfile a jeden redolog
+Databáze pro verifikaci struktury používá tzv. health monitor, který se spouští každých 5 minut. Pro urychlení je možno jej spusťit ručně příkazem exec DBMS_HM.RUN_CHECK('DB Structure Integrity Check');
+Pokud to lze, použijte recovery advisor a databázi obnovte. Použijte příkazy:
+List failure
+Advise failure
+Repair failure preview
+Repair failure
+Pokud nelze, použijte příkazy pro kompletní obnovu databáze
+
+Pro obnovu redologů za chodu databáze použijte příkazy:
+
+Najděte, který redolog je INVALID - select group#,member from v$logfile where status='INVALID';
+
+Nejjednodušší způsob opravy je zrušit celou skupinu a založit ji znovu pomocí příkazů:
+ALTER DATABASE DROP LOGFILE GROUP xxx:
+ALTER DATABASE ADD LOGFILE GROUP xxx:
+kde xxx je číslo skupiny z předchozího příkazu
+V případě, že databáze vypíše chybu, že daná skupina je aktuální a nelze ji tudíž modifikovat, zadejte příkaz
+ALTER SYSTEM SWITCH LOGFILE;
+Tím se stane aktivní následující skupina a s touto skupinou již bude možné pracovat.

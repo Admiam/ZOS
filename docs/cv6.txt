@@ -1,0 +1,170 @@
+Prostudujte, jak funguje Automatic Database Diagnostic Monitor (ADDM) 
+
+Lze použít např. přímo dokumentaci Oracle (https://docs.oracle.com/en/database/oracle/oracle-database/19/tdppt/automatic-database-performance-monitoring.html#GUID-5D73B7DC-BC9A-4029-A741-2BF9EBB45AE9)
+
+Nebo je možné se inspirovat z youtube...  např. z tohoto videa: https://www.youtube.com/watch?app=desktop&v=KWzygthqG0I
+
+Připadně můžete zkusit i umělou inteligenci  :-)
+
+Samostatný úkol se pak skládá z těchto bodů:
+* Nastavte proměnnou prostředí v linuxu NLS_LANG na hodnotu CZECH_CZECH REPUBLIC.UTF8 (např. příkazem export NLS_LANG=“CZECH_CZECH REPUBLIC.UTF8“). Pokud nebude tato proměnná nastavena, objeví se vám v průběhu cvičení chyba ORA-13605: Zadana uloha nebo objekt ULOHA_xxx neexistuje pro aktuálního uživatele
+* V DB Zkontrolujte, zda je povoleno ADDM 
+* inicializační parametr control_management_pack_access musí být nastaven na hodnotu DIAGNOSTIC+TUNING
+* Zjistěte, jak je nastaven interval pro vytváření snapshotů ADDM (select * from dba_hist_wr_control)
+* Pod uživatele oracle nakopírujte soubor cviceni6.zip a rozzipujte jej.
+* Spusťte skript simulující zátěž databáze – c6.sh (nezapomeňte nastavit příslušná oprávnění chmod u+x c6.sh)
+* Vytvořte ADDM report zahrnující dobu průběhu zátěžového testu. Abyste nemuseli čekat celou nastavenou periodu, je možné vytvořit si POD UŽIVATELEM SYS nebo SYSTEM AWR snapshot jak před tak ihned po spuštění zátěžového skriptu pomocí  SQL Plus a příkazu exec dbms_workload_repository.create_snapshot;
+* Vytvořte ADDM report pomocí SQL Plus a skriptu @$ORACLE_HOME/rdbms/admin/addmrpt.sql.
+* Najděte SQL příkaz, který způsobil největší zátěž databáze
+* Tento příkaz zadejte jako odpověď na tento úkol do Google classroomu
+* 5 nejrychlejších správných odpovědí získá bod do celkového hodnocení
+ sql file: declare
+t number;
+begin
+for t in 1..100000 loop
+insert into spct values (Null,'a');
+commit;
+end loop;
+end;
+/
+exit
+
+.sh file: #!/bin/bash
+
+# set the machine load factors
+function ldfactor {
+memsize=`sed -n '/MemTotal/ {s/MemTotal:[ ]*\([0-9]*\) kB/\1/p}' /proc/meminfo`
+membase=1
+memsize=`echo "scale=2; $memsize/1035320" | bc`
+memfactor=`echo "scale=2; (($memsize-$membase)/.9)+1" | bc`
+
+bogo=`sed -n '/bogo/{ s/^bogo.* \([0-9]*\)\.[0-9]*$/\1/p}' /proc/cpuinfo`
+
+declare -i numcpu
+declare -i totbogo
+for i in $bogo
+do
+totbogo=$totbogo+$i
+(( numcpu+=1 ))
+done
+
+cpus=$numcpu
+bogobase=3342
+bogofactor=`echo "scale=2; ($totbogo*1.1/$bogobase)"|bc`
+
+#  round(input)*factors
+inval=$1
+inval1=`echo "scale=0; $inval*$bogofactor*$memfactor/1" | bc`
+inval2=`echo "scale=1; $inval*$bogofactor*$memfactor/1" | bc`
+inval3=`echo "scale=0; (10*$inval2)-(10*$inval1)" | bc`
+newval=`echo "if ( $inval3 >= 5) $inval1+1 else $inval1+0" | bc`
+}
+
+function memfactor {
+memsize=`sed -n '/MemTotal/ {s/MemTotal:[ ]*\([0-9]*\) kB/\1/p}' /proc/meminfo`
+membase=1
+memsize=`echo "scale=2; $memsize/1035320" | bc`
+memfactor=`echo "scale=2; (($memsize-$membase)*.9)+1" | bc`
+
+#  round(input)*factors
+inval=$1
+inval1=`echo "scale=0; $inval*$memfactor/1" | bc`
+inval2=`echo "scale=1; $inval*$memfactor/1" | bc`
+inval3=`echo "scale=0; (10*$inval2)-(10*$inval1)" | bc`
+newval=`echo "if ( $inval3 >= 5) $inval1+1 else $inval1+0" | bc`
+}
+
+# set the machine CPU factor
+function cpufactor {
+
+bogo=`sed -n '/bogo/{ s/^bogo.* \([0-9]*\)\.[0-9]*$/\1/p}' /proc/cpuinfo`
+
+declare -i numcpu
+numcpu=0
+
+declare -i totbogo
+for i in $bogo
+do
+totbogo=$totbogo+$i
+(( numcpu+=1 ))
+done
+
+cpus=$numcpu
+
+bogobase=3342
+bogofactor=`echo "scale=2; ($totbogo*1.1/$bogobase)"|bc`
+
+#  round(input)*factors
+inval=$1
+inval1=`echo "scale=0; $inval*$bogofactor/1" | bc`
+inval2=`echo "scale=1; $inval*$bogofactor/1" | bc`
+inval3=`echo "scale=0; (10*$inval2)-(10*$inval1)" | bc`
+newval=`echo "if ( $inval3 >= 5) $inval1+1 else $inval1+0" | bc`
+}
+
+# set the machine CPU factor inverse
+function invcpufactor {
+
+bogo=`sed -n '/bogo/{ s/^bogo.* \([0-9]*\)\.[0-9]*$/\1/p}' /proc/cpuinfo`
+
+declare -i totbogo
+for i in $bogo
+do
+totbogo=$totbogo+$i
+done
+
+bogobase=3342
+bogofactor=`echo "scale=2; ($totbogo*1.1/$bogobase)"|bc`
+
+#  round(input)*factors
+inval=$1
+inval1=`echo "scale=0; $inval/$bogofactor" | bc`
+inval2=`echo "scale=1; $inval/$bogofactor" | bc`
+inval3=`echo "scale=0; (10*$inval2)-(10*$inval1)" | bc`
+newval=`echo "if ( $inval3 >= 5) $inval1+1 else $inval1+0" | bc`
+}
+
+function newdir {
+slashdir=`df | awk '$6 ~ /\/$/ {print $1}'`
+}
+
+function cpucount {
+
+bogo=`sed -n '/bogo/{ s/^bogo.* \([0-9]*\)\.[0-9]*$/\1/p}' /proc/cpuinfo`
+
+declare -i totcpu
+totcpu=0
+for i in $bogo
+do
+ totcpu=$totcpu+1
+done
+cpunum=$totcpu
+}
+
+users=6
+cpufactor $users
+
+x=1 y=$newval 
+#UNPW="hr/hr" ORACLE_SID=adm 
+#ORACLE_HOME=/home/oracle/app/oracle/product/12.2.0/dbhome_1 
+#PATH=$PATH:$ORACLE_HOME/bin
+
+sqlplus / as sysdba << EOF
+begin
+execute immediate 'drop table spct purge';
+exception when others then
+if sqlcode =-942 then null;
+else raise;
+end if;
+end;
+/
+
+create table spct(id number, name varchar2(2000));
+EOF
+
+while [ $x -le $y ]
+do
+    sqlplus / as sysdba @c6.sql &
+    x=`expr $x + 1`
+done
+

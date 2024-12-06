@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.7)  21 OCT 2024 09:41
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.7)  6 DEC 2024 13:37
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -390,7 +390,7 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 48
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Live
 ))
 \c@lstlisting=\count304
-<img/fav.png, id=32, 597.432pt x 293.1753pt>
+<img/fav.png, id=120, 597.432pt x 293.1753pt>
 File: img/fav.png Graphic file (type png)
 <use img/fav.png>
 Package pdftex.def Info: img/fav.png  used on input line 39.
@@ -417,48 +417,95 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 \openout6 = `documentation.lol'.
 
  [2]
-Overfull \hbox (0.16122pt too wide) in paragraph at lines 102--103
-\OT1/cmr/m/n/12 v^^Sysledku dan^^Seho kola. Za-hr-nuje in-for-mace o tahu obou hr^^Sa^^Tc^^Wu a v^^Sysledku
+Overfull \hbox (7.60281pt too wide) in paragraph at lines 89--90
+\OT1/cmr/m/n/12 C^^S^^Plem se-mestr^^Saln^^S^^P pr^^Sace je im-ple-men-tace zjed-nodu^^Tsen^^Seho sou-bo-rov^^Seho syst^^Semu
  []
 
 
-Overfull \hbox (18.29974pt too wide) in paragraph at lines 103--104
-[]\OT1/cmr/bx/n/12 RoundEndMessage\OT1/cmr/m/n/12 : Ser-ver touto zpr^^Savou ozna-muje ukon^^Tcen^^S^^P aktu^^Saln^^S^^Pho
+Overfull \hbox (13.00264pt too wide) in paragraph at lines 96--97
+[]\OT1/cmr/bx/n/12 P^^Tresunut^^S^^P nebo p^^Trejmenov^^San^^S^^P sou-boru (mv)\OT1/cmr/m/n/12 : Tento p^^Tr^^S^^Pkaz umo^^Tz^^Tnuje
+ []
+
+
+Overfull \hbox (12.69026pt too wide) in paragraph at lines 96--97
+\OT1/cmr/m/n/12 p^^Tresunout sou-bor z jedn^^Se cesty do jin^^Se, nebo p^^Trejmenovat sou-bor. Kl^^S^^P^^Tcovou
+ []
+
+
+Overfull \hbox (17.9876pt too wide) in paragraph at lines 98--99
+[]\OT1/cmr/bx/n/12 Odstran^^Ten^^S^^P sou-boru (rm)\OT1/cmr/m/n/12 : Umo^^Tz^^Tnuje ma-zat konkr^^Setn^^S^^P sou-bory. D^^Wule^^Tzit^^Se
  []
 
 [3{/usr/local/texlive/2023/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc}]
-<img/protocol.png, id=70, 1564.84625pt x 1176.395pt>
-File: img/protocol.png Graphic file (type png)
-<use img/protocol.png>
-Package pdftex.def Info: img/protocol.png  used on input line 121.
-(pdftex.def)             Requested size: 272.99881pt x 205.226pt.
-
-Overfull \hbox (7.3115pt too wide) in paragraph at lines 126--127
-[]\OT1/cmr/m/n/12 Navr^^Tzen^^Sy pro-to-kol zaji^^Tst[]uje efek-tivn^^S^^P p^^Trenos in-for-mac^^S^^P a syn-chro-ni-zaci pr^^Wub^^Tehu
+Overfull \hbox (8.37135pt too wide) in paragraph at lines 112--113
+[]\OT1/cmr/bx/n/12 Kontrola in-te-grity sou-bo-rov^^Seho syst^^Semu (check)\OT1/cmr/m/n/12 : Zaji^^Tst[]uje ov^^Te^^Tren^^S^^P
  []
 
-[4
-pdfTeX warning (ext4): destination with the same identifier (name{figure.1}) has been already used, duplicate ignored
-<argument> ...shipout:D \box_use:N \l_shipout_box 
-                                                  \__shipout_drop_firstpage_...
-l.136     printf(
-                 "Hello, World!\n"); <./img/protocol.png>] [5] (./documentation.aux)
+
+Overfull \hbox (0.44743pt too wide) in paragraph at lines 112--113
+\OT1/cmr/m/n/12 ztra-cen^^Se bloky, ne-kon-zis-tentn^^S^^P ta-bulky FAT a spr^^Savnost da-tov^^Sych struk-
+ []
+
+
+Overfull \hbox (8.99402pt too wide) in paragraph at lines 114--115
+[]\OT1/cmr/bx/n/12 Po^^Tskozen^^S^^P sou-bo-rov^^Seho syst^^Semu (bug)\OT1/cmr/m/n/12 : Si-mu-luje po^^Tskozen^^S^^P syst^^Semu,
+ []
+
+[4]
+Overfull \hbox (14.75447pt too wide) in paragraph at lines 150--151
+\OT1/cmr/m/n/12 iden-ti-fi-kuje po^^Tskozen^^Se clus-tery (\OT1/cmtt/m/n/12 FAT[]BAD[]CLUSTER\OT1/cmr/m/n/12 ) a zji^^Tst[]uje, zda nejsou sou^^Tc^^Sast^^S^^P
+ []
+
+[5]
+LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <12> not available
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 168.
+
+Overfull \hbox (16.07518pt too wide) in paragraph at lines 168--172
+\OT1/cmr/bx/n/12 Metoda: Kon-struk-tor \OT1/cmtt/m/n/12 PseudoFAT::PseudoFAT(const std::string &file) 
+ []
+
+[6]
+Overfull \hbox (4.10841pt too wide) in paragraph at lines 197--198
+[]\OT1/cmr/m/n/12 P^^Trid^^Sa nov^^Sy ad-res^^Sa^^Tr do c^^S^^Plov^^Seho ad-res^^Sa^^Tre a ak-tu-a-li-zuje struk-turu syst^^Semu. 
+ []
+
+
+Overfull \hbox (3.75778pt too wide) in paragraph at lines 202--206
+[]\OT1/cmr/bx/n/12 U^^Tcel: \OT1/cmr/m/n/12 Zaji^^Tst[]uje, ^^Tze FAT ta-bulky a da-tov^^Se struk-tury syst^^Semu nejsou po^^Tskozen^^Se. 
+ []
+
+
+Overfull \hbox (36.7053pt too wide) in paragraph at lines 206--207
+[]\OT1/cmr/m/n/12 Proch^^Saz^^S^^P FAT ta-bulku a kon-t-ro-luje ne-platn^^Se clus-tery (nap^^Tr. \OT1/cmtt/m/n/12 FAT[]BAD[]CLUSTER\OT1/cmr/m/n/12 ). 
+ []
+
+
+Overfull \hbox (26.47797pt too wide) in paragraph at lines 223--227
+\OT1/cmr/bx/n/12 Metoda: \OT1/cmtt/m/n/12 PseudoFAT::mv(const std::string &srcPath, const std::string
+ []
+
+[7]
+Overfull \hbox (26.47797pt too wide) in paragraph at lines 233--237
+[]\OT1/cmr/bx/n/12 Metoda: \OT1/cmtt/m/n/12 PseudoFAT::cp(const std::string &srcPath, const std::string
+ []
+
+[8] [9] [10] (./documentation.aux)
 Package rerunfilecheck Info: File `documentation.out' has not changed.
-(rerunfilecheck)             Checksum: F1F9A5799DD8BF20505B999C5B0A6B1B;814.
+(rerunfilecheck)             Checksum: 7CC530B1D52899A8124176A0F47C2934;4934.
  ) 
 Here is how much of TeX's memory you used:
- 12674 strings out of 476025
- 197751 string characters out of 5790017
- 1865388 words of memory out of 5000000
- 32943 multiletter control sequences out of 15000+600000
- 518292 words of font info for 52 fonts, out of 8000000 for 9000
+ 12373 strings out of 476025
+ 195564 string characters out of 5790017
+ 1862388 words of memory out of 5000000
+ 32627 multiletter control sequences out of 15000+600000
+ 517992 words of font info for 51 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 63i,6n,67p,708b,1974s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
-Output written on documentation.pdf (5 pages, 246409 bytes).
+ 63i,6n,67p,576b,543s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/local/texlive/2023/texmf-dist/fonts/type1/public/cm-super/sfrm1200.pfb>
+Output written on documentation.pdf (10 pages, 145369 bytes).
 PDF statistics:
- 129 PDF objects out of 1000 (max. 8388607)
- 102 compressed objects within 2 object streams
- 25 named destinations out of 1000 (max. 500000)
- 67 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 244 PDF objects out of 1000 (max. 8388607)
+ 215 compressed objects within 3 object streams
+ 41 named destinations out of 1000 (max. 500000)
+ 238 words of extra memory for PDF output out of 10000 (max. 10000000)
 

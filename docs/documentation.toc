@@ -1,8 +1,30 @@
 \babel@toc {czech}{}\relax 
 \contentsline {section}{\numberline {1}Zadání}{3}{section.1}%
 \contentsline {section}{\numberline {2}Analýza úlohy}{3}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Popis protokolu}{3}{subsection.2.1}%
-\contentsline {subsection}{\numberline {2.2}Diagram protokolu}{4}{subsection.2.2}%
-\contentsline {section}{\numberline {3}Ipmlementace}{4}{section.3}%
-\contentsline {section}{\numberline {4}Uživatelská příručka}{5}{section.4}%
-\contentsline {section}{\numberline {5}Závěr}{5}{section.5}%
+\contentsline {subsection}{\numberline {2.1}Základní operace}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Rozšířené operace}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Hodnocení a očekávané výsledky}{4}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}Funkce FAT tabulky}{4}{subsection.2.4}%
+\contentsline {subsection}{\numberline {2.5}Vlastnosti FAT tabulky v systému}{5}{subsection.2.5}%
+\contentsline {subsection}{\numberline {2.6}Správa poškození a kontrola integrity}{5}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}Ilustrace funkčnosti}{5}{subsection.2.7}%
+\contentsline {section}{\numberline {3}Implementace systému PseudoFAT}{6}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Inicializace systému}{6}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Formátování disku}{6}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Práce s adresáři}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Kontrola integrity systému}{7}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Mazání adresářů}{7}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}Přesun a kopírování souborů}{7}{subsection.3.6}%
+\contentsline {section}{\numberline {4}Uživatelská příručka}{8}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Překlad programu}{8}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Spuštění programu}{8}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}Nový souborový systém}{8}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}Otevření existujícího souborového systému}{8}{subsubsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.3}Chyba souborového systému}{9}{subsubsection.4.2.3}%
+\contentsline {subsection}{\numberline {4.3}Dostupné příkazy}{9}{subsection.4.3}%
+\contentsline {subsubsection}{\numberline {4.3.1}Základní příkazy}{9}{subsubsection.4.3.1}%
+\contentsline {subsubsection}{\numberline {4.3.2}Správa adresářů}{9}{subsubsection.4.3.2}%
+\contentsline {subsubsection}{\numberline {4.3.3}Práce se soubory}{9}{subsubsection.4.3.3}%
+\contentsline {subsubsection}{\numberline {4.3.4}Další příkazy}{9}{subsubsection.4.3.4}%
+\contentsline {subsection}{\numberline {4.4}Chybová hlášení}{10}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Závěr}{10}{section.5}%

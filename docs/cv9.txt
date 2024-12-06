@@ -1,0 +1,28 @@
+Opět je vhodná týmová spolupráce ideálně ve stejném složení jako při zálohování databáze. Nicméně celý úkol lze samozřejmě zvládnout i coby jednotlivec. Maximální počet členů týmu je 3.
+
+1. Zazálohujte databázi – bez ohledu na default nastavení použijte příkaz (ideálně každou metodu vždy jeden člen týmu):
+• Backup as backupset database
+• Backup as compressed backupset database
+• Backup as copy database
+
+2. Databázi uzavřete
+
+3. Smažte všechny datové soubory ze složky /opt/oracle/oradata/ORCL/datafile
+
+4. Databázi obnovte - v případě image copies použijte metodu switch a následné přejmenování souborů, změřte přitom časy příkazů switch resp. restore a následně i recover, oba časy sečtěte
+• Pro Backupset a Compressed backupset obnovte databázi dle stránky 14 přednášky Obnova databáze
+• Pro Image copies obnovte databázi dle stránky 16 přednášky Obnova databáze. Vzhledem k tomu, že používáme tzv. Oracle Managed Files, použijte pro přesun souborů do originálního umístění příkaz
+
+alter database move datafile 1;
+
+kde jedničku nahraďte postupně všemi čísly jednotlivých datových souborů. Ta získáte příkazem
+
+select file#,name from v$datafile;
+
+Jako celkový čas ale počítejte pouze čas příkazu switch a recover, protože při kopírování na původní umístění již databáze běží.
+
+5. Zkontrolujte, že databáze běží.
+
+Pro každou metodu proveďte měření času 5x (je nutné provést všechny body 1 až 5). Na tabuli napište vždy za každý tým tři čísla - průměry pro jednotlivé metody.
+
+Na závěr smažte všechny tálohu z dnešního cvičení.

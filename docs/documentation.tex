@@ -48,8 +48,7 @@
         \vspace{1cm}
         
         \LARGE
-        Základy operačních systémů
-        
+        Souborový systém založený na pseudoFAT       
         \vfill
         
         \vspace{0.5cm}
@@ -59,7 +58,7 @@
         Student:        Adam Míka \\
         Osobní číslo:   A22B0319P \\
         Email:          mikaa@students.zcu.cz \\
-        Datum:          20. září 2024
+        Datum:          5. prosince 2024
         \vspace{0.2cm}
         
     \end{center}
@@ -75,9 +74,6 @@
 \tableofcontents
 \listoffigures
 \lstlistoflistings
-\begin{thebibliography}{99}
-    \bibitem{image1ref} Zdroj Obrázku 1: \url{https://philipstel.wordpress.com/2010/08/04/dictionary-based-algorithm-lempel-ziv-welch/}
-  \end{thebibliography}
 \pagebreak
 
 
@@ -90,58 +86,243 @@ Zbytek zadání zde: \href{https://portal.zcu.cz/CoursewarePortlets2/DownloadDok
 
 \section{Analýza úlohy}
 
-Úkolem této práce je navrhnout a implementovat komunikační protokol pro hru „Rock-Paper-Scissors“ (kámen, nůžky, papír) v rámci předmětu KIV/UPS. Hra je koncipována pro více hráčů, konkrétně pro dva účastníky, kteří spolu soutěží v sérii 10 kol. Každé kolo probíhá tak, že oba hráči nezávisle na sobě zvolí jednu z možností (kámen, nůžky, nebo papír) a poté tuto volbu odešlou serveru. Server následně zpracuje přijaté tahy, vyhodnotí výsledek daného kola, určí vítěze, aktualizuje skóre obou hráčů a případně ukončí hru po odehrání všech kol.
+Cílem semestrální práce je implementace zjednodušeného souborového systému na bázi pseudoFAT, který umožní uživatelům provádět základní operace se soubory a adresáři. Zadané úlohy lze rozdělit do několika hlavních kategorií podle funkcionalit, které systém poskytuje. V této sekci analyzujeme požadavky na jednotlivé příkazy a jejich význam pro souborový systém.
 
-\subsection{Popis protokolu}
-
-Komunikační protokol zahrnuje různé typy zpráv, které slouží pro přenos informací mezi klientem a serverem. Každý typ zprávy má specifickou strukturu a účel. Níže jsou popsány jednotlivé typy zpráv použité v protokolu:
+\subsection{Základní operace}
 
 \begin{itemize}
-    \item \textbf{PlayMessage}: Tato zpráva je odesílána klientem, když hráč zvolí svůj tah (kámen, nůžky, nebo papír). Obsahuje identifikátor hry, identifikátor hráče a zvolenou akci.
-    \item \textbf{ValidMoveMessage}: Server touto zprávou potvrzuje, že přijal platný tah od daného hráče.
-    \item \textbf{ResultMessage}: Tato zpráva je odesílána serverem, aby informovala o výsledku daného kola. Zahrnuje informace o tahu obou hráčů a výsledku (výhra, prohra, remíza).
-    \item \textbf{RoundEndMessage}: Server touto zprávou oznamuje ukončení aktuálního kola a poskytuje aktuální skóre obou hráčů.
-    \item \textbf{GameEndMessage}: Tato zpráva informuje o ukončení hry a oznamuje celkového vítěze nebo důvod předčasného ukončení hry (např. dosažení maximálního počtu kol).
-    \item \textbf{ExitMessage}: Zpráva slouží k indikaci odpojení hráče nebo ukončení hry ze strany klienta či serveru.
+    \item \textbf{Kopírování souboru (cp)}: Tento příkaz umožňuje kopírovat soubor z jednoho umístění (zdroj) do druhého (cíl). Součástí implementace je nutnost validace cesty k cíli i zdroji. Příkaz musí detekovat chyby, jako například neexistující zdroj nebo cíl.
+    
+    \item \textbf{Přesunutí nebo přejmenování souboru (mv)}: Tento příkaz umožňuje přesunout soubor z jedné cesty do jiné, nebo přejmenovat soubor. Klíčovou částí je validace, zda cílová cesta existuje a zda nedochází ke konfliktu názvů.
+    
+    \item \textbf{Odstranění souboru (rm)}: Umožňuje mazat konkrétní soubory. Důležité je validovat, zda je mazán skutečně soubor (ne adresář), a ověřit existenci souboru.
+    
+    \item \textbf{Vytvoření adresáře (mkdir)}: Slouží k vytvoření nového adresáře. Příkaz musí ověřit, zda již neexistuje adresář nebo soubor se stejným názvem v cílové cestě.
+    
+    \item \textbf{Odstranění prázdného adresáře (rmdir)}: Tento příkaz odstraňuje pouze prázdné adresáře. Je nutné kontrolovat, zda je adresář skutečně prázdný, a odlišit situaci, kdy je na vstupu zadán soubor místo adresáře.
 \end{itemize}
 
-Každá zpráva obsahuje hlavičku, která je tvořena následujícími položkami:
+\subsection{Rozšířené operace}
+
 \begin{itemize}
-    \item \textbf{magic}: Konstantní řetězec „KIVRPS“, který slouží k identifikaci protokolu.
-    \item \textbf{command}: Typ příkazu, který specifikuje, o jaký druh zprávy se jedná (např. „play“, „result“).
-    \item \textbf{totalLength}: Celková délka zprávy.
+    \item \textbf{Načítání příkazů ze souboru (load)}: Tento příkaz umožňuje provést příkazy uložené v textovém souboru. Formát vstupního souboru musí být validní a každý příkaz by měl být zpracován sekvenčně.
+    
+    \item \textbf{Formátování souborového systému (format)}: Příkaz vytvoří nový souborový systém na zadané velikosti. Při implementaci je třeba zohlednit inicializaci tabulek FAT a alokaci prostoru pro datové bloky.
+    
+    \item \textbf{Kontrola integrity souborového systému (check)}: Zajišťuje ověření konzistence struktury souborového systému, jako jsou chybné nebo ztracené bloky, nekonzistentní tabulky FAT a správnost datových struktur.
+    
+    \item \textbf{Poškození souborového systému (bug)}: Simuluje poškození systému, aby bylo možné testovat příkaz \textit{check}.
 \end{itemize}
 
-\subsection{Diagram protokolu}
+\subsection{Hodnocení a očekávané výsledky}
 
-Na obrázku \ref{fig:protocol} je znázorněn diagram komunikačního protokolu, který zobrazuje strukturu zpráv a vztahy mezi nimi. Tento diagram slouží jako vizuální reprezentace, která usnadňuje pochopení způsobu výměny informací mezi klientem a serverem.
+Při implementaci a testování systému je nutné dodržet následující požadavky:
+\begin{itemize}
+    \item Funkční a korektní zpracování všech příkazů.
+    \item Validace vstupů a robustní detekce chybových stavů.
+    \item Testování chování systému při chybách (např. použití \textit{bug} a následné ověření příkazem \textit{check}).
+    \item Dokumentace výsledků a výpisů příkazů v předepsaném formátu.
+\end{itemize}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.7\textwidth]{img/protocol.png}
-    \caption{Diagram komunikačního protokolu pro hru Rock-Paper-Scissors}
-    \label{fig:protocol}
-\end{figure}
+\subsection{Funkce FAT tabulky}
 
-Navržený protokol zajišťuje efektivní přenos informací a synchronizaci průběhu hry. Díky použití standardu ASN.1 lze protokol snadno rozšířit a přizpůsobit pro případné další požadavky na funkcionalitu systému.
+FAT (File Allocation Table) je jádrem správy souborového systému a hraje zásadní roli při sledování alokace dat na disku. Princip FAT tabulky spočívá v udržování seznamu propojených bloků dat (clusterů), které tvoří jednotlivé soubory či složky. Každý cluster má odpovídající záznam v tabulce, kde je uvedeno, zda:
 
+\begin{itemize}
+    \item je cluster součástí souboru/složky a na který následující cluster odkazuje,
+    \item je cluster označen jako konec souboru (\texttt{FAT\_FILE\_END}),
+    \item je cluster volný pro použití (\texttt{FAT\_UNUSED}),
+    \item je cluster poškozený (\texttt{FAT\_BAD\_CLUSTER}).
+\end{itemize}
 
-\section{Ipmlementace}
+Tento systém umožňuje efektivní navigaci mezi jednotlivými částmi dat souboru a optimalizuje správu volného prostoru na disku.
 
-\begin{lstlisting}
-// hello.c
-#include <stdio.h>
+\subsection{Vlastnosti FAT tabulky v systému}
 
-int main() {
-    printf("Hello, World!\n");
-    return 0;
-}
-\end{lstlisting}
+\begin{itemize}
+    \item \textbf{Jednoduchost:} FAT tabulka je implementována jako jednorozměrné pole čísel, kde index pole odpovídá číslu clusteru. Hodnota uložená na daném indexu určuje další cluster v řetězci nebo speciální stav (např. \texttt{FAT\_FILE\_END}).
+    \item \textbf{Flexibilita:} Soubory mohou být uložené v nepropojených clusterech. Pokud je soubor fragmentovaný, tabulka umožňuje jeho rekonstrukci díky propojení mezi clustery.
+    \item \textbf{Omezení:} Fragmentace může vést ke sníženému výkonu při práci s velkými soubory, protože systém musí neustále přeskakovat mezi clustery.
+\end{itemize}
+
+\subsection{Správa poškození a kontrola integrity}
+
+Pro kontrolu integrity souborového systému je využíván příkaz \texttt{check}, který identifikuje poškozené clustery (\texttt{FAT\_BAD\_CLUSTER}) a zjišťuje, zda nejsou součástí žádného řetězce. Příkaz \texttt{bug} umožňuje simulaci chyb tím, že označí cluster jako poškozený. Takto je možné testovat robustnost systému a funkčnost kontrolních mechanismů.
+
+\subsection{Ilustrace funkčnosti}
+
+Například soubor rozdělený do dvou clusterů:
+
+\begin{itemize}
+    \item \texttt{FAT[0] = 1} (první cluster ukazuje na druhý),
+    \item \texttt{FAT[1] = FAT\_FILE\_END} (konec souboru).
+\end{itemize}
+
+Tento přístup zajišťuje jednoduchou správu dat i v případě, že disk obsahuje fragmentované soubory. Pokud by se cluster označený jako \texttt{FAT\_BAD\_CLUSTER} stal součástí řetězce, příkaz \texttt{check} tuto chybu identifikuje a upozorní na ni.
+
+\newpage
+\section{Implementace systému PseudoFAT}
+Tato sekce stručně popisuje klíčové metody implementace systému PseudoFAT. Každá metoda je uvedena s popisem svého účelu, hlavní funkcionality a výstupu.
+
+\subsection{Inicializace systému}
+\textbf{Metoda: Konstruktor \texttt{PseudoFAT::PseudoFAT(const std::string \&file)}} \\
+\textbf{Účel:} Zajišťuje načtení existujícího souborového systému nebo vytvoření nového při absenci souboru. \\
+\textbf{Funkce:}
+\begin{itemize}
+    \item Zkontroluje, zda zadaný soubor existuje.
+    \item Pokud neexistuje, umožní uživateli provést formátování pomocí příkazu \texttt{format}.
+    \item Pokud existuje, načte struktury systému a aktualizuje ukazatel na další volné ID.
+\end{itemize}
+\textbf{Výstup:} Úspěšné načtení nebo inicializace systému.
+
+\subsection{Formátování disku}
+\textbf{Metoda: \texttt{PseudoFAT::formatDisk(const std::string \&sizeStr)}} \\
+\textbf{Účel:} Inicializuje nový souborový systém s definovanou velikostí. \\
+\textbf{Funkce:}
+\begin{itemize}
+    \item Vypočítá a inicializuje FAT tabulky.
+    \item Vytvoří datový soubor s nulovými hodnotami o zadané velikosti.
+    \item Přidá kořenový adresář do struktury systému.
+    \item Uloží stav systému do souboru.
+\end{itemize}
+\textbf{Výstup:} OK nebo chybová zpráva při selhání vytvoření souboru.
+
+\subsection{Práce s adresáři}
+\textbf{Metoda: \texttt{PseudoFAT::createDirectory(const std::string \&path)}} \\
+\textbf{Účel:} Vytvoří nový adresář na zadané cestě. \\
+\textbf{Funkce:}
+\begin{itemize}
+    \item Ověří, zda cesta obsahuje pouze jedno jméno adresáře.
+    \item Zkontroluje, zda v cílovém adresáři již neexistuje soubor nebo adresář se stejným názvem.
+    \item Přidá nový adresář do cílového adresáře a aktualizuje strukturu systému.
+\end{itemize}
+\textbf{Výstup:} OK nebo chybová zpráva při neplatné cestě nebo jménu.
+
+\subsection{Kontrola integrity systému}
+\textbf{Metoda: \texttt{PseudoFAT::check()}} \\
+\textbf{Účel:} Zajišťuje, že FAT tabulky a datové struktury systému nejsou poškozené. \\
+\textbf{Funkce:}
+\begin{itemize}
+    \item Prochází FAT tabulku a kontroluje neplatné clustery (např. \texttt{FAT\_BAD\_CLUSTER}).
+    \item Hledá sirotčí clustery, které nejsou propojené s žádným souborem.
+\end{itemize}
+\textbf{Výstup:} Zpráva o stavu systému – buď „No corruption detected“, nebo podrobnosti o nalezených chybách.
+
+\subsection{Mazání adresářů}
+\textbf{Metoda: \texttt{PseudoFAT::rmdir(const std::string \&path)}} \\
+\textbf{Účel:} Odstraní prázdný adresář na zadané cestě. \\
+\textbf{Funkce:}
+\begin{itemize}
+    \item Ověří, zda zadaná cesta odkazuje na adresář.
+    \item Zkontroluje, zda je adresář prázdný.
+    \item Odstraní adresář z rodičovské struktury a uloží změny do souboru.
+\end{itemize}
+\textbf{Výstup:} OK nebo chybová zpráva při neplatné cestě nebo neúspěšném mazání.
+
+\subsection{Přesun a kopírování souborů}
+\textbf{Metoda: \texttt{PseudoFAT::mv(const std::string \&srcPath, const std::string \&destPath)}} \\
+\textbf{Účel:} Přesune nebo přejmenuje soubor. \\
+\textbf{Funkce:}
+\begin{itemize}
+    \item Ověří existenci zdrojového souboru a cílového adresáře.
+    \item Zkontroluje konflikty názvů v cílovém adresáři.
+    \item Aktualizuje informace o souboru a uloží změny.
+\end{itemize}
+\textbf{Výstup:} OK nebo chybová zpráva.
+
+\textbf{Metoda: \texttt{PseudoFAT::cp(const std::string \&srcPath, const std::string \&destPath)}} \\
+\textbf{Účel:} Kopíruje soubor do nového umístění. \\
+\textbf{Funkce:}
+\begin{itemize}
+    \item Alokuje nové clustery pro kopii souboru.
+    \item Zkopíruje data ze zdrojových clusterů do nových.
+    \item Přidá kopii souboru do cílového adresáře.
+\end{itemize}
+\textbf{Výstup:} OK nebo chybová zpráva.
 
 
 \section{Uživatelská příručka}
 
+\subsection{Překlad programu}
+Pro překlad programu použijte následující příkazy:
+\begin{verbatim}
+make clean
+make
+\end{verbatim}
+
+\subsection{Spuštění programu}
+Program se spouští pomocí:
+\begin{verbatim}
+./main <název_souboru>
+\end{verbatim}
+Například:
+\begin{verbatim}
+./main fileSystem.dat
+\end{verbatim}
+
+\subsubsection{Nový souborový systém}
+Pokud soubor \texttt{fileSystem.dat} neexistuje, je nutné jej nejprve naformátovat. Použijte příkaz:
+\begin{verbatim}
+format 600MB
+\end{verbatim}
+
+\subsubsection{Otevření existujícího souborového systému}
+Pokud soubor již existuje a byl dříve použit, program jej načte a umožní okamžitou práci s příkazy.
+
+\subsubsection{Chyba souborového systému}
+Pokud soubor obsahuje chybu, například \texttt{File bad cluster}, mohou být použity pouze následující příkazy:
+\begin{itemize}
+    \item \texttt{format} – Opětovné naformátování souborového systému.
+    \item \texttt{check} – Kontrola integrity souborového systému.
+    \item \texttt{exit} – Ukončení programu.
+\end{itemize}
+
+\subsection{Dostupné příkazy}
+Níže je uveden seznam příkazů a jejich popis.
+
+\subsubsection{Základní příkazy}
+\begin{itemize}
+    \item \textbf{\texttt{format <velikost>}} – Formátuje souborový systém na danou velikost.
+    \item \textbf{\texttt{exit}} – Ukončí program.
+\end{itemize}
+
+\subsubsection{Správa adresářů}
+\begin{itemize}
+    \item \textbf{\texttt{mkdir <cesta>}} – Vytvoří nový adresář.
+    \item \textbf{\texttt{rmdir <cesta>}} – Smaže prázdný adresář.
+    \item \textbf{\texttt{cd <cesta>}} – Změní aktuální pracovní adresář.
+    \item \textbf{\texttt{ls <cesta>}} – Vypíše obsah adresáře.
+\end{itemize}
+
+\subsubsection{Práce se soubory}
+\begin{itemize}
+    \item \textbf{\texttt{incp <zdroj> <cíl>}} – Importuje soubor z pevného disku do systému.
+    \item \textbf{\texttt{outcp <zdroj> <cíl>}} – Exportuje soubor ze systému na pevný disk.
+    \item \textbf{\texttt{rm <cesta>}} – Smaže soubor.
+    \item \textbf{\texttt{mv <zdroj> <cíl>}} – Přesune nebo přejmenuje soubor/adresář.
+    \item \textbf{\texttt{cp <zdroj> <cíl>}} – Zkopíruje soubor/adresář.
+\end{itemize}
+
+\subsubsection{Další příkazy}
+\begin{itemize}
+    \item \textbf{\texttt{cat <cesta>}} – Vypíše obsah souboru.
+    \item \textbf{\texttt{info <cesta>}} – Zobrazí informace o souboru nebo adresáři.
+    \item \textbf{\texttt{load <soubor>}} – Načte příkazy ze souboru a provede je.
+    \item \textbf{\texttt{check}} – Zkontroluje integritu souborového systému.
+    \item \textbf{\texttt{bug <cesta>}} – Poškodí souborový systém pro testování.
+\end{itemize}
+
+\subsection{Chybová hlášení}
+\begin{itemize}
+    \item \texttt{INVALID PATH} – Neplatná cesta.
+    \item \texttt{PATH NOT FOUND} – Cesta nebyla nalezena.
+    \item \texttt{FILE NOT FOUND} – Soubor nebyl nalezen.
+    \item \texttt{SAME NAME} – Název již existuje.
+    \item \texttt{NOT ENOUGH SPACE} – Nedostatek místa pro operaci.
+\end{itemize}
+
 
 \section{Závěr}
+Popisované metody demonstrují klíčové části implementace systému PseudoFAT. Každá metoda je navržena tak, aby splňovala požadavky na správu souborového systému a zároveň zajišťovala robustní detekci a opravu chyb.
 
 \end{document}

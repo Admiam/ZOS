@@ -1,8 +1,0 @@
-mkdir a
-mkdir b
-incp a.pdf fa
-mv fa a/fa
-cd a
-cp fa ../b/fb
-cd ..
-outcp b/fb c.pdf

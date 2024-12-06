@@ -1,0 +1,9 @@
+Ze souboru hodnocení studentů vystaveného na těchto stránkách  vytvořte externí tabulku HODNOCENI_EXT ve schématu uživatele SYSTEM. Vytvořte selekt tak, aby na prvním místě vybral studenta s nejvyšším součtem bodů a na posledním toho s nejnižším počtem bodů. Sreenshot seznamu vytvořený v programu SQL Developer v čitelné podobě !!! zkopírujte do classroomu. Prvních pět z vás získá poslední bod do závěrečného hodnocení.
+
+Pokyny
+Nejjednodušší je zřejmě z excelovského souboru vytvořit soubor CSV a ten dále zpracovávat
+Soubor by měl být v UTF, jinak je potřeba nastavit proměnnou prostředí NLS_LANG. (Např. pro standardní windows kódování CP1250 takto export NLS_LANG='CZECH_CZECH REPUBLIC.EE8MSWIN1250')
+Použijte buď  některý z již existujících Oracle Directory  (např. DATA_PUMP_DIR ukazuje do /opt/oracle/admin/orcl/dpdump) nebo si vytvořte vlastní Oracle Directory
+Tabulku založte příkazem podle vzoru z přednášky Přesuny dat - Externí tabulky ORACLE_LOADER
+Pokud příkaz select * from hodnoceni_ext skončí chybou, log s popisem této chyby najdete ve stejném adresáři, kde je umístěn soubor s daty
+Výsledkem bude select jména, příjmení a počtu (součtu všech)  bodů seřazený podle počtu bodů od největšího k nejmenšímu,

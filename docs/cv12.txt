@@ -1,0 +1,77 @@
+Zkontrolujte případně  nastavte:
+Archivelog režimu
+Nastavení controlfile autobackup v RMANu na ON
+Fyzické místo na disku – v případě nedostatku místa smažte zálohy z minulých cvičení
+Typ zálohování - compressed backupset
+Nastavte retention na redundancy 1
+Velikost Flash recovery area nejméně 200G
+Zkontrolujte rudundatnost
+Řídících souborů - použijte skript control.sql
+Transakčního žurnálu (archivních logů) - použijte skript arch.sql
+Online redologů - použijte skript redo.sql
+Zkontrolujte existenci alespoň jedné zálohy - použijte script backup.sql
+
+Řídící soubory
+Musí existovat nejméně dvě kopie. Další nelze přidat za běhu databáze, Nejprve přidejte nový soubor do inicializačního parametru control files (v přákazu musí zůstat i ty původní)
+
+
+alter system set control_files='/opt/oracle/oradata/ORCL/controlfile/o1_mf_mh3h95rl_.ctl, /opt/oracle/fast_recovery_area/ORCL/controlfile/o1_mf_mh3h95tt_.ctl,/home/oracle/control.bak' scope=spfile;
+
+Poté databázi zastavete a zkpírujte jeden z existujícíh řídících souborů do nového umístění. Pak databázi opět nastartujte
+
+Transakční žurnál - archivní logy
+
+Musí existovat nejméně dvě kopie všech archivních logů. Pokud není nastaven žádný inicializační parametr LOG_ARCHIVE_DEST_x, archivní llogy se defaultně vytváří ve fast recovery area. Pokud chceme multiplexovat, mási se nastavit dva parametry. Nastavte tedy multiplexování archivních logů do adresáře  /home/oracle/multiplex/arch (adresář nejprve vytvořte) a do něj nastavte multiplexování. Nastavte tedy příslušné  parametry následovně:
+alter system set LOG_ARCHIVE_DEST_1='LOCATION=USE_DB_RECOVERY_FILE_DEST';
+alter system set LOG_ARCHIVE_DEST_2='LOCATION=/home/oracle/multiplex/arch';
+Transakční žurnál - online redology
+
+Každý skupina musí mít alespoň dva členy,. Pro přidání dalšího člena do všech skupin nepjprve vytvořte adresář pto tyto členy /home/oracle/multiplex/redo a poté přidejte jednotlivé členy pomocí příkazů:
+
+alter database add logfile member  '/home/oracle/multiplex/redo/redo01.log' to group 1, 
+alter database add logfile member  '/home/oracle/multiplex/redo/redo02.log' to group 2;   
+alter database add logfile member  '/home/oracle/multiplex/redo/redo03.log' to group 3;
+
+redo.sql:
+SELECT 
+    l.GROUP# AS LOG_GROUP,
+    case 
+    when count(*)>1 then count(*)||' OK' 
+    else count(*)||' ERROR' end POCET
+FROM 
+    V$LOG l, V$LOGFILE lf
+    where l.GROUP# = lf.GROUP#
+    group by l.GROUP#
+ORDER BY 
+    l.GROUP#;
+
+
+control.sql:
+select 
+case
+when count(*)>1 then count(*)||' OK'
+else count(*)||' Chyba' 
+end controlfiles from v$controlfile;
+
+backup.sql:
+SELECT
+    bs.START_TIME AS BACKUP_DATE,
+    bs.COMPLETION_TIME AS BACKUP_COMPLETION,
+    bp.HANDLE AS BACKUP_LOCATION,
+    bdf.CHECKPOINT_CHANGE# AS SCN,
+    CASE
+        WHEN bs.CONTROLFILE_INCLUDED = 'YES' THEN 'Autobackup'
+        ELSE CASE
+            WHEN bs.BACKUP_TYPE = 'D' THEN 'Datafile Backupset'
+            WHEN bs.BACKUP_TYPE = 'I' THEN 'Incremental Backupset'
+            WHEN bs.BACKUP_TYPE = 'L' THEN 'Archive Log Backupset'
+            ELSE 'Other Backupset'
+        END
+    END AS BACKUP_TYPE
+FROM V$BACKUP_SET bs, V$BACKUP_PIECE bp,  V$BACKUP_DATAFILE bdf
+where  bs.SET_STAMP = bp.SET_STAMP AND bs.SET_COUNT = bp.SET_COUNT
+AND    bs.SET_STAMP = bdf.SET_STAMP AND bs.SET_COUNT = bdf.SET_COUNT
+ORDER By  bs.START_TIME DESC;
+
+
+arch.sql:
